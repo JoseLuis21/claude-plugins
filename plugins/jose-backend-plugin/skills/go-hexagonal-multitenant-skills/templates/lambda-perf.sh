@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Resume las ultimas ejecuciones de una Lambda Go de Bicom: etapas, queries,
+# Resume las ultimas ejecuciones de una Lambda Go de reportes: etapas, queries,
 # desenlace y la linea REPORT (duracion, memoria, init).
 #
 #   scripts/lambda-perf.sh <function-name> [minutos=60] [region=us-east-2]

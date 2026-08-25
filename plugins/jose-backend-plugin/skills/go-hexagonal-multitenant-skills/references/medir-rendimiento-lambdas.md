@@ -1,30 +1,30 @@
 # Medir el rendimiento de las Lambdas de reportes
 
-Guía para revisar cualquier Lambda Go de Bicom (`bicom-lambda-report-*`) después de un
+Guía para revisar cualquier Lambda Go de reportes después de un
 despliegue o cuando alguien dice "está lento". Sirve igual para las que vengan: todas usan el
 mismo patrón de logs (slog JSON + métricas EMF), así que el mismo script y las mismas
 consultas aplican.
 
-Lambdas hoy:
+Mantén una tabla como esta con las tuyas: sin ella, la mitad del tiempo de diagnóstico se va
+en averiguar qué cola alimenta a qué función.
 
-| Función | Cola SQS | Llave Redis | Repo |
+| Función | Cola SQS | Llave de estado | Repo |
 |---|---|---|---|
-| `bicom-lambda-report-stock-movements` | `BICOM-SQS-REPORT-STOCK-MOVEMENTS` | `Report[{bd_id}][report_stock_movements_go]` | `bicom-report-stock-movements` |
-| `bicom-lambda-report-stock-product-list` | `BICOM-SQS-REPORT-STOCK-PRODUCT-LIST` | `Report[{bd_id}][report_stock_product_list_go]` | `bicom-report-stock-product-list` |
+| `<org>-lambda-report-<informe>` | `<COLA-SQS-DEL-INFORME>` | `Report[{bd_id}][<clave_del_informe>]` | `<repo>` |
 
 ---
 
 ## 1. El script: qué pasó en la última hora
 
 ```bash
-scripts/lambda-perf.sh bicom-lambda-report-stock-product-list        # última hora
-scripts/lambda-perf.sh bicom-lambda-report-stock-movements 180       # últimas 3 horas
+scripts/lambda-perf.sh <nombre-de-la-lambda>            # última hora
+scripts/lambda-perf.sh <nombre-de-la-lambda> 180        # últimas 3 horas
 ```
 
 Imprime, por invocación, las líneas que importan y termina con la línea `REPORT` de Lambda:
 
 ```
-18:05:44 INFO pool MySQL creado | db_name=bicom_rbahamonde
+18:05:44 INFO pool MySQL creado | db_name=<base_del_tenant>
 18:05:44 INFO query ejecutada | Query=Q1 company QueryDurationMs=9 QueryRows=1
 18:05:44 INFO cursor abierto | first_byte_ms=64
 18:05:45 INFO query ejecutada | Query=Q3 products_stream QueryDurationMs=335 QueryRows=5352
@@ -49,7 +49,7 @@ Imprime, por invocación, las líneas que importan y termina con la línea `REPO
 
 ---
 
-## 2. Métricas EMF en CloudWatch (namespace `Bicom/ReportStockMovements` o el del repo)
+## 2. Métricas EMF en CloudWatch (namespace `<Organizacion>/<Servicio>`, el que declare el repo)
 
 Sin leer logs, para gráficos y alarmas:
 
@@ -63,7 +63,7 @@ Sin leer logs, para gráficos y alarmas:
 
 ```bash
 # p95 de cada query en las últimas 6 horas
-aws cloudwatch get-metric-statistics --namespace Bicom/ReportStockMovements \
+aws cloudwatch get-metric-statistics --namespace <Organizacion>/<Servicio> \
   --metric-name QueryDurationMs --dimensions Name=Query,Value="Q4 movements_stream" \
   --start-time $(date -u -v-6H +%FT%TZ) --end-time $(date -u +%FT%TZ) \
   --period 3600 --extended-statistics p95 --region us-east-2
@@ -121,9 +121,9 @@ aws lambda get-function-configuration --function-name <fn> --region us-east-2 \
   --query 'Environment.Variables' --output json | python3 -c "
 import sys,json; d=json.load(sys.stdin); n='1'
 open('/tmp/my.cnf','w').write('[client]\nhost=%s\nport=%s\nuser=%s\npassword=%s\n' % (
-  d['BC_HOST_MYSQL_'+n], d.get('BC_PORT_MYSQL_'+n,'3306'), d['BC_USER_MYSQL_'+n], d['BC_PASSWORD_MYSQL_'+n]))"
+  d['<PREFIJO>_HOST_MYSQL_'+n], d.get('<PREFIJO>_PORT_MYSQL_'+n,'3306'), d['<PREFIJO>_USER_MYSQL_'+n], d['<PREFIJO>_PASSWORD_MYSQL_'+n]))"
 chmod 600 /tmp/my.cnf
-mysql --defaults-file=/tmp/my.cnf bicom_rbahamonde -e "EXPLAIN ANALYZE ..."
+mysql --defaults-file=/tmp/my.cnf <base_del_tenant> -e "EXPLAIN ANALYZE ..."
 rm /tmp/my.cnf
 ```
 
@@ -146,13 +146,12 @@ aws cloudwatch get-metric-statistics --namespace AWS/SQS --metric-name NumberOfM
 - Mensajes enviados pero sin invocación → event source mapping deshabilitado, o concurrencia
   reservada en 0.
 - Invocación con `no existe la llave del reporte en Redis` → el front escribe en **otra llave**
-  (nos pasó al renombrar `report_stock` → `report_stock_movements_go`: la Lambda leía la nueva
-  y el front escribía la vieja).
+  (pasa al renombrar la clave: la Lambda lee la nueva y el front escribe la vieja).
 
 Ver el estado en Redis (TLS, desde una máquina con acceso a la VPC):
 
 ```bash
-redis-cli --tls --insecure -h <host> -a <pass> GET 'Report[146][report_stock_movements_go]'
+redis-cli --tls --insecure -h <host> -a <pass> GET 'Report[<bd_id>][<clave_del_informe>]'
 ```
 
 ---

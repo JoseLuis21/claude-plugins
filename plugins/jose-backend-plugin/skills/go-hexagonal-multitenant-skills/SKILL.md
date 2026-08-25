@@ -1,12 +1,12 @@
 ---
 name: go-hexagonal-multitenant-skills
-description: Estructura un microservicio o Lambda en Go con arquitectura hexagonal (core/domain, core/ports, core/services, adapters driving/driven, app/wire) y conexiones a bases de datos multi-tenant resueltas por número de nodo (BC_HOST_MYSQL_N + bd_name → pool cacheado por proceso), con las optimizaciones probadas en Bicom: pool por nodo+base con lifetime corto para Aurora/Lambda, DSN sin credenciales en texto, interpolateParams, streaming fila a fila con memoria constante, queries independientes en paralelo con errgroup, subida a S3 por io.Pipe, contexto con margen antes del deadline y WithoutCancel para escribir el estado de error, errores de negocio vs infraestructura (reintento SQS parcial), métricas EMF por query/nodo, FlexInt para JSON de PHP, decimal en vez de float, y cmd/local para paridad. Úsala cuando pidan: portar un servicio Node/TS/PHP a Go, "hexagonal" o "ports and adapters" en Go, conectarse a "el nodo N" / varias bases por tenant, pools de MySQL en Lambda, un consumidor SQS→Lambda en Go, generar reportes/archivos grandes sin cargar todo en memoria, subir a S3 en streaming, medir queries por tenant en CloudWatch, o revisar por qué un servicio Go se queda sin conexiones/memoria/tiempo.
+description: Estructura un microservicio o Lambda en Go con arquitectura hexagonal (core/domain, core/ports, core/services, adapters driving/driven, app/wire) y conexiones a bases de datos multi-tenant resueltas por número de nodo (<PREFIJO>_HOST_MYSQL_N + nombre de base → pool cacheado por proceso), con las optimizaciones probadas en producción: pool por nodo+base con lifetime corto para Aurora/Lambda, DSN sin credenciales en texto, interpolateParams, streaming fila a fila con memoria constante, queries independientes en paralelo con errgroup, subida a S3 por io.Pipe, contexto con margen antes del deadline y WithoutCancel para escribir el estado de error, errores de negocio vs infraestructura (reintento SQS parcial), métricas EMF por query/nodo, FlexInt para JSON de PHP, decimal en vez de float, y cmd/local para paridad. Úsala cuando pidan: portar un servicio Node/TS/PHP a Go, "hexagonal" o "ports and adapters" en Go, conectarse a "el nodo N" / varias bases por tenant, pools de MySQL en Lambda, un consumidor SQS→Lambda en Go, generar reportes/archivos grandes sin cargar todo en memoria, subir a S3 en streaming, medir queries por tenant en CloudWatch, o revisar por qué un servicio Go se queda sin conexiones/memoria/tiempo.
 ---
 
 # Go hexagonal + conexiones multi-tenant por nodo
 
-Patrón probado en `bicom-report-stock-movements` (Lambda SQS → MySQL por nodo → PDF/XLSX →
-S3 + Redis) heredando decisiones que `bicom-ms-stock-closing` ya pagó en producción.
+Patrón probado en producción en un servicio Lambda SQS → MySQL por nodo → PDF/XLSX → S3 +
+Redis, heredando decisiones que un servicio de cierre mensual ya pagó antes.
 Las plantillas en `templates/` se copian y se adaptan (son `.go.tmpl`: sustituir `<module>`
 por la ruta del módulo y ajustar el nombre del paquete).
 
@@ -46,11 +46,11 @@ El mensaje trae `{bd_id, host, bd_name}` donde **`host` es un índice de nodo (1
 hostname**. La configuración lo resuelve:
 
 ```
-BC_HOST_MYSQL_{n}  BC_PORT_MYSQL_{n}  BC_USER_MYSQL_{n}  BC_PASSWORD_MYSQL_{n}
+<PREFIJO>_HOST_MYSQL_{n}  <PREFIJO>_PORT_MYSQL_{n}  <PREFIJO>_USER_MYSQL_{n}  <PREFIJO>_PASSWORD_MYSQL_{n}
 ```
 
 - `config.MysqlNode(n)` devuelve credenciales o un error claro (`nodo 7 sin configurar (falta
-  BC_HOST_MYSQL_7)`); **nunca** fallback a localhost. El sufijo va siempre, incluido el `_1`.
+  <PREFIJO>_HOST_MYSQL_7)`); **nunca** fallback a localhost. El sufijo va siempre, incluido el `_1`.
 - `Pools` guarda **un `*sql.DB` por `"{nodo}:{base}"`** en un mapa con mutex, vivo durante todo el
   proceso: en Lambda el entorno se reutiliza entre invocaciones y un tenant recurrente no vuelve
   a abrir conexiones. `Close()` solo lo usa `cmd/local`.

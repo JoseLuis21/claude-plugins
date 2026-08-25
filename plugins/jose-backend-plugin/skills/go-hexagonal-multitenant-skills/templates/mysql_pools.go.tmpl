@@ -88,7 +88,7 @@ func (p *Pools) get(node int, dbName string) (*sql.DB, error) {
 	return db, nil
 }
 
-// open arma el pool. Decisiones heredadas de bicom-ms-stock-closing, que ya
+// open arma el pool. Decisiones heredadas de un servicio en produccion, que ya
 // las pago en produccion:
 //
 //   - Las credenciales NO van en el DSN de texto: el driver toma la contrasena

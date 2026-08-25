@@ -5,12 +5,12 @@ description: Configura el build de Docker de un servicio o de una AWS Lambda de 
 
 # Docker build con cache + multiplataforma (local / GitHub Actions / Railway / Lambda)
 
-Patrón probado en `integrafacturacion-backend`: build en dos etapas, cache mounts de
+Patrón probado en producción: build en dos etapas, cache mounts de
 BuildKit, cross-compilación por arquitectura y un Dockerfile aparte para Railway.
 Objetivo: un cambio incremental recompila en segundos en vez de ~155s.
 
-La variante para **AWS Lambda como imagen de contenedor** (probada en
-`bicom-ms-stock-closing-lambda-cron`) reusa el mismo esqueleto y cambia la etapa
+La variante para **AWS Lambda como imagen de contenedor** (probada en una Lambda de cron
+en producción) reusa el mismo esqueleto y cambia la etapa
 final: ver *AWS Lambda*.
 
 ## Piezas
