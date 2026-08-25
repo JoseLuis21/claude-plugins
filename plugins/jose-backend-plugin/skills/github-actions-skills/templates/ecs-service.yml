@@ -1,0 +1,157 @@
+# Copiar a .github/workflows/production.yml (o deploy.yml, según la convención del repo).
+# Destino: servicio ECS. Build -> ECR -> nueva revisión de task definition -> update del servicio.
+name: Deploy <Nombre legible del servicio>
+
+on:
+  push:
+    branches:
+      - <main|master|production>
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: <region>
+  ECR_REPOSITORY: <repo-ecr>
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  # ARN completo con sufijo: sácalo de `aws secretsmanager list-secrets`.
+  SECRET_ARN: arn:aws:secretsmanager:<region>:<cuenta>:secret:<nombre-con-sufijo>
+  ENV_FILE: .env
+  ECS_CLUSTER: <cluster>
+  ECS_SERVICE: <servicio>
+  ECS_TASK_DEFINITION: <familia-task-definition>
+  # Nombre del contenedor DENTRO de la task definition (en los repos PHP suele ser `php-fpm`).
+  # Si no coincide, el render no reemplaza la imagen y el deploy queda verde sin desplegar nada.
+  CONTAINER_NAME: <nombre-del-contenedor>
+  # Tiene que ser el mismo cpuArchitecture de la task definition, no el del cluster.
+  PLATFORM: linux/arm64
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy AWS <servicio>
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Send GitHub Action data to a Slack workflow
+        uses: act10ns/slack@v2
+        with:
+          channel: "<#canal-inicio>"
+          status: starting
+          message: Starting Deploy <servicio>
+        if: always()
+
+      # --- Solo repos Go: lint barato antes de gastar un build ---------------
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "<1.24>"
+          cache-dependency-path: src/go.sum
+
+      - name: Vet
+        working-directory: src
+        run: go vet ./...
+      # ----------------------------------------------------------------------
+
+      # QEMU SOLO si la etapa final del Dockerfile ejecuta algo en la arquitectura
+      # destino (npm ci, composer install). Con Go la etapa builder cross-compila y
+      # la final solo copia: borra este paso, son minutos regalados.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ env.PLATFORM }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # La configuración NO va como environment/secrets de la task definition: se baja
+      # aquí, se convierte a .env y el Dockerfile la hornea en la imagen (COPY .env* al
+      # final). Por eso la TD tiene environment: [] y secrets: [] y no hay que tocarla.
+      - name: Fetch secrets from AWS Secrets Manager
+        run: |
+          aws secretsmanager get-secret-value \
+            --secret-id "$SECRET_ARN" \
+            --region "$AWS_REGION" \
+            --query 'SecretString' --output text > secrets.json
+
+      - name: Convert secrets to .env format
+        run: |
+          jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' secrets.json > "$ENV_FILE"
+          # Solo el conteo: los valores no se imprimen en el log del job.
+          echo "$ENV_FILE generado con $(wc -l < "$ENV_FILE") variables"
+
+      # Esta action deja el docker login hecho: no repitas `aws ecr get-login-password`.
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Tag por SHA además de latest: sin eso el rollback obliga a reconstruir.
+      # cache gha mode=max cachea también las capas del builder, que es el trabajo caro.
+      # provenance=false: ECS espera una imagen simple, no un manifest con attestations.
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: ${{ env.PLATFORM }}
+          push: true
+          provenance: false
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # build-args para repos Go privados:
+          # build-args: |
+          #   USERNAME=${{ secrets.GH_USERNAME }}
+          #   ACCESS_TOKEN=${{ secrets.GH_ACCESS_TOKEN }}
+
+      # Sin `:revision`: devuelve la última ACTIVE de la familia, así un cambio de
+      # CPU/memoria/rol hecho en la consola se respeta en vez de pisarse.
+      - name: Get last TaskDefinition from AWS
+        id: get-task-def
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_DEFINITION" \
+            --region "$AWS_REGION" \
+            --query 'taskDefinition' > "$ECS_TASK_DEFINITION.json"
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+      # wait-for-service-stability hace que el job falle si la tarea entra en crash
+      # loop, en vez de dar verde apenas AWS acepta el deploy.
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Send Notify to slack finish deploy
+        uses: act10ns/slack@v2
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+          channel: "<#canal-final>"
+        if: always()

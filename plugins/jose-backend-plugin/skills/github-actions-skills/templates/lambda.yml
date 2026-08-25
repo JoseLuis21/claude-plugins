@@ -1,0 +1,117 @@
+# Copiar a .github/workflows/production.yml
+# Destino: AWS Lambda como imagen de contenedor. Build de UNA arquitectura -> ECR ->
+# update-function-code.
+name: Deploy <Nombre legible de la lambda>
+
+on:
+  push:
+    branches:
+      - <main|master|production>
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: <region>
+  ECR_REPOSITORY: <repo-ecr>
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  LAMBDA_ARN: arn:aws:lambda:<region>:<cuenta>:function:<nombre-funcion>
+  # arm64 = Graviton (~20% más barato). Si la función existente es x86_64, migrarla
+  # es un cambio aparte: cambia esto Y la base del Dockerfile a la vez.
+  ARCH: arm64
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy AWS <lambda>
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Send GitHub Action data to a Slack workflow
+        uses: act10ns/slack@v2
+        with:
+          channel: "<#canal-inicio>"
+          status: starting
+          message: Starting Deploy <lambda>
+        if: always()
+
+      # --- Solo repos Go ------------------------------------------------------
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "<1.24>"
+          cache-dependency-path: src/go.sum
+
+      - name: Vet
+        working-directory: src
+        run: go vet ./...
+      # ------------------------------------------------------------------------
+
+      # Sin setup-qemu-action: Go cross-compila y la etapa final del Dockerfile solo
+      # copia archivos. Si esa etapa llega a tener un RUN, hay que volver a poner QEMU
+      # o el build revienta con "exec format error".
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY"
+          # --provenance/--sbom en false: Lambda rechaza los manifests OCI con las
+          # attestations que buildx agrega por defecto al hacer push
+          # ("The image manifest, config or layer media type ... is not supported").
+          # Una sola arquitectura: una función Lambda no admite manifest list.
+          docker buildx build \
+            --platform "linux/${ARCH}" \
+            --provenance=false --sbom=false \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            -t "$IMAGE_URI:latest" \
+            -t "$IMAGE_URI:${{ github.sha }}" \
+            -f Dockerfile \
+            --push .
+          echo "image=$IMAGE_URI:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Update Lambda function
+        env:
+          LAMBDA_ARN: ${{ env.LAMBDA_ARN }}
+          IMAGE_URI: ${{ steps.build-image.outputs.image }}
+        run: |
+          # Se despliega por SHA, no por :latest, para que el rollback sea apuntar a
+          # un tag anterior y no reconstruir.
+          # --architectures es lo que migra la función a Graviton; sin esa bandera la
+          # función sigue en la arquitectura vieja y la imagen nueva no arranca.
+          aws lambda update-function-code \
+            --function-name "$LAMBDA_ARN" \
+            --image-uri "$IMAGE_URI" \
+            --architectures "$ARCH"
+          # Sin el wait, un update-function-configuration posterior falla con
+          # ResourceConflictException.
+          aws lambda wait function-updated --function-name "$LAMBDA_ARN"
+
+      - name: Send Notify to slack finish deploy
+        uses: act10ns/slack@v2
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+          channel: "<#canal-final>"
+        if: always()

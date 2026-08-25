@@ -1,0 +1,87 @@
+# Copiar a .github/workflows/deploy.yml
+# Build de UNA arquitectura + push a ECR + actualización de la Lambda.
+# Ojo: aquí no se usa multi-arch. Una función Lambda tiene una sola
+# arquitectura; publicar un manifest list solo agrega peso y riesgo.
+name: deploy
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: <region>
+  ECR_REPOSITORY: <repo>
+  LAMBDA_ARN: arn:aws:lambda:<region>:<account>:function:<function>
+  ARCH: arm64 # arm64 = Graviton: ~20% más barato y algo más rápido
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: src/go.sum
+
+      - name: Vet
+        working-directory: src
+        run: go vet ./...
+
+      # Sin setup-qemu-action: Go cross-compila y la etapa final solo copia
+      # archivos, así que nada del target se ejecuta durante el build.
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Esta action ya deja el docker login hecho: no repitas
+      # `aws ecr get-login-password | docker login` después.
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY"
+          # --provenance/--sbom en false: Lambda rechaza los manifests OCI con
+          # attestations que buildx adjunta por defecto al hacer push
+          # ("The image manifest, config or layer media type ... is not supported").
+          docker buildx build \
+            --platform linux/${ARCH} \
+            --provenance=false --sbom=false \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            -t "$IMAGE_URI:latest" \
+            -t "$IMAGE_URI:${{ github.sha }}" \
+            --push .
+          echo "image=$IMAGE_URI:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Update Lambda
+        env:
+          IMAGE_URI: ${{ steps.build-image.outputs.image }}
+        run: |
+          # Por SHA y no por :latest, para que el rollback sea apuntar a un tag
+          # anterior en vez de reconstruir.
+          aws lambda update-function-code \
+            --function-name "$LAMBDA_ARN" \
+            --image-uri "$IMAGE_URI" \
+            --architectures "$ARCH"
+          # Sin el wait, un update-function-configuration posterior falla con
+          # ResourceConflictException.
+          aws lambda wait function-updated --function-name "$LAMBDA_ARN"

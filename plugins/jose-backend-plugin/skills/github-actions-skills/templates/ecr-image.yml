@@ -1,0 +1,89 @@
+# Copiar a .github/workflows/<rama>-deploy.yml
+# Destino: solo ECR. Imágenes base que otros repos consumen con FROM (php-fpm, nginx,
+# runtimes internos) o imágenes que despliega otro proceso. No hay ECS ni Lambda que tocar.
+# Convención habitual: una rama por variante y el tag con el mismo nombre.
+name: Deploy <Nombre de la imagen> - <VARIANTE>
+
+on:
+  push:
+    branches:
+      - <production|beta|alpine|control|tenant|master>
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: <region>
+  ECR_REPOSITORY: <repo-ecr>
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  # El tag ES el contrato con los repos que hacen FROM: una rama por variante y el
+  # tag con el mismo nombre. Cambiarlo rompe el build de todos los consumidores.
+  IMAGE_TAG: <production|beta|alpine|control|tenant|master>
+  PLATFORM: linux/amd64
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy AWS <imagen> <variante>
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Send GitHub Action data to a Slack workflow
+        uses: act10ns/slack@v2
+        with:
+          channel: "<#canal-inicio>"
+          status: starting
+          message: Starting Deploy <imagen> <variante>
+        if: always()
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # QEMU solo si el Dockerfile ejecuta RUN en la arquitectura destino y esta no es
+      # la del runner (amd64). Para una imagen base amd64: no hace falta.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: ${{ env.PLATFORM }}
+          push: true
+          provenance: false
+          # Además del tag de la variante, uno por SHA: deja rastro de qué commit
+          # produjo la imagen que hoy está en `production`.
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Valores no sensibles (versiones, nombres de app) van como `vars`, no como secrets:
+          # build-args: |
+          #   NEW_RELIC_APP_NAME=${{ vars.NEW_RELIC_APP_NAME_PROD }}
+          #   NEW_RELIC_LICENSE_KEY=${{ vars.NEW_RELIC_LICENSE_KEY_PROD }}
+          #   NEW_RELIC_AGENT_VERSION=${{ vars.NEW_RELIC_AGENT_PROD }}
+
+      - name: Send Notify to slack finish deploy
+        uses: act10ns/slack@v2
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+          channel: "<#canal-final>"
+        if: always()

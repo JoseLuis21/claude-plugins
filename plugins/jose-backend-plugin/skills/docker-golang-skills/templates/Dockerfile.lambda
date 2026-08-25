@@ -1,0 +1,77 @@
+# syntax=docker/dockerfile:1.7
+#
+# Imagen de contenedor para AWS Lambda (runtime `provided`, Go) de <project>.
+# Diferencias con el Dockerfile de servicio: la imagen final es la base de
+# Lambda (no alpine), el binario se llama `bootstrap`, no hay EXPOSE ni CMD, y
+# las extensiones se hornean en la imagen porque las Lambdas de contenedor NO
+# admiten layers.
+
+# =============================================================================
+# 1. EXTENSION LAMBDA INSIGHTS  (opcional: borra esta etapa si no la usas)
+# =============================================================================
+# Se EXTRAE el rpm en vez de instalarlo con `rpm -U`:
+#   - rpm valida la arquitectura del host y rechaza el paquete arm64 en un
+#     runner amd64;
+#   - extraer no ejecuta nada del target, así la etapa final se queda sin RUN y
+#     no necesita QEMU.
+# El rpm es DISTINTO por arquitectura: el de x86_64 en una imagen arm64 deja la
+# extensión muerta (falla en silencio, sin métricas en CloudWatch).
+# El rpm trae DOS cosas: el binario en /opt/extensions y su config en
+# /opt/cloudwatch. Hay que copiar las dos (ver etapa 3).
+FROM --platform=$BUILDPLATFORM public.ecr.aws/amazonlinux/amazonlinux:2 AS insights
+ARG TARGETARCH
+RUN set -eux; \
+    yum install -y -q cpio; \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        URL="https://lambda-insights-extension-arm64.s3.ap-northeast-1.amazonaws.com/amazon_linux/lambda-insights-extension-arm64.rpm"; \
+    else \
+        URL="https://lambda-insights-extension.s3-ap-northeast-1.amazonaws.com/amazon_linux/lambda-insights-extension.rpm"; \
+    fi; \
+    curl -fsSL "$URL" -o /tmp/insights.rpm; \
+    mkdir -p /insights; \
+    cd /insights && rpm2cpio /tmp/insights.rpm | cpio -idm; \
+    test -x /insights/opt/extensions/cloudwatch_lambda_agent; \
+    test -f /insights/opt/cloudwatch/cloudwatch_lambda_agent.toml
+
+# =============================================================================
+# 2. BUILD
+# =============================================================================
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:1.25-alpine AS builder
+ARG TARGETOS
+ARG TARGETARCH
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,id=<project>-gomod,target=/go/pkg/mod,sharing=locked \
+    go mod download
+
+COPY cmd ./cmd
+COPY internal ./internal
+
+# Nada de `go mod tidy` dentro del build: muta go.mod/go.sum, exige red y hace
+# que el resultado dependa del proxy en vez del go.sum commiteado.
+# -trimpath + -s -w: binario más chico => menos cold start.
+RUN --mount=type=cache,id=<project>-gomod,target=/go/pkg/mod,sharing=locked \
+    --mount=type=cache,id=<project>-gobuild-${TARGETARCH},target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-arm64} \
+    go build -trimpath -ldflags="-s -w" -o /out/bootstrap ./cmd/<lambda>
+
+# =============================================================================
+# 3. RUNTIME
+# =============================================================================
+# Sin --platform: hereda $TARGETPLATFORM y baja la base de la arquitectura
+# correcta. Esta etapa SOLO copia archivos: por eso se puede armar una imagen
+# arm64 desde un host amd64 sin emulación.
+FROM public.ecr.aws/lambda/provided:al2
+
+# TODO /opt, no solo /opt/extensions: el agente lee su config en
+# /opt/cloudwatch/cloudwatch_lambda_agent.toml y sin ella hace panic al iniciar
+# ("Failed to initialize settings"), lo que marca CADA invocación como
+# Extension.Crash aunque el handler termine bien.
+COPY --from=insights /insights/opt /opt
+COPY --from=builder /out/bootstrap ${LAMBDA_TASK_ROOT}/bootstrap
+
+# El runtime `provided` espera un ejecutable llamado `bootstrap` en
+# LAMBDA_TASK_ROOT (/var/task). ENTRYPOINT en exec form NO expande variables,
+# por eso va la ruta literal.
+ENTRYPOINT ["/var/task/bootstrap"]

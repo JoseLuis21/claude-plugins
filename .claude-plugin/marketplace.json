@@ -1,0 +1,30 @@
+{
+  "name": "jose-backend-plugin",
+  "owner": {
+    "name": "Jose Luis",
+    "email": "josedevelopcl@gmail.com",
+    "url": "https://github.com/JoseLuis21"
+  },
+  "description": "Plugins de Claude Code para trabajo de backend: Docker, GitHub Actions, AWS, commits convencionales y seguridad OWASP.",
+  "version": "0.2.0",
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "jose-backend-plugin",
+      "displayName": "Jose Backend Plugin",
+      "source": "./plugins/jose-backend-plugin",
+      "description": "Toolkit de backend: Dockerfile con cache de BuildKit y multi-arch, workflows de GitHub Actions para desplegar en ECS/Lambda/ECR, commits convencionales y revisión de seguridad OWASP Top 10.",
+      "version": "0.2.0",
+      "author": {
+        "name": "Jose Luis",
+        "url": "https://github.com/JoseLuis21"
+      },
+      "category": "devops",
+      "keywords": ["docker", "golang", "github-actions", "aws", "ecs", "lambda", "ecr", "railway", "ci-cd", "git", "conventional-commits", "owasp", "security"],
+      "license": "MIT",
+      "strict": true
+    }
+  ]
+}

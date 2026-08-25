@@ -1,0 +1,16 @@
+# Copiar a .dockerignore en la raíz del repo.
+# Todo lo que entre al contexto y cambie seguido invalida los COPY y tira el
+# cache de capas; además .env aquí evita que un secreto llegue a la imagen.
+.git
+.gitignore
+.github
+.env
+!.env.example
+docs
+tmp
+bin
+dist
+coverage
+vendor
+README.md
+*.md

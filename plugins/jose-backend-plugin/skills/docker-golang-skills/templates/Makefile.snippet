@@ -1,0 +1,56 @@
+# Targets de build/deploy con Docker. Añadirlos al .PHONY del Makefile.
+
+PROD_COMPOSE ?= docker-compose.prod.yml
+IMAGE ?= <project>
+PLATFORMS ?= linux/amd64,linux/arm64
+
+docker-up:
+	docker compose up --build
+
+docker-rebuild:
+	docker compose up --build -d
+
+# Fuerza BuildKit + la ruta de build del docker-cli para que los cache mounts
+# funcionen incluso en hosts donde compose v1 / el builder legacy tomarían el
+# control. En `docker compose` v2 BuildKit ya es el default y estas env vars
+# sobran, pero no molestan.
+prod-up-buildkit:
+	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose -f $(PROD_COMPOSE) up --build -d
+
+# Build de una sola arquitectura, queda en el daemon local.
+docker-build-arm:
+	docker build --platform linux/arm64 -t $(IMAGE):arm64 .
+
+# Multi-arch: buildx no puede cargar un manifest list en el daemon local, por eso
+# --push (o --output=type=oci) es obligatorio aquí.
+docker-buildx-push:
+	docker buildx build --platform $(PLATFORMS) --push -t $(IMAGE):latest .
+
+# Prueba que el Dockerfile de Railway sigue construyendo (sin cache mounts).
+docker-build-railway:
+	docker build -f Dockerfile.railway -t $(IMAGE):railway .
+
+# --- Lambda (imagen de contenedor) -------------------------------------------
+LAMBDA_IMAGE ?= <project>
+LAMBDA_PLATFORM ?= linux/arm64
+
+# --provenance/--sbom en false: los manifests con attestations los rechaza
+# Lambda. --load para que la imagen quede en el daemon y se pueda inspeccionar.
+lambda-build:
+	docker buildx build --platform $(LAMBDA_PLATFORM) \
+		--provenance=false --sbom=false --load \
+		-f Dockerfile.lambda -t $(LAMBDA_IMAGE):local .
+
+# Comprueba que la arquitectura de la imagen es la pedida y que la extensión
+# quedó dentro. Un `Architecture: amd64` aquí = la Lambda arm64 no arranca.
+lambda-verify: lambda-build
+	@docker image inspect $(LAMBDA_IMAGE):local --format 'imagen: {{.Architecture}}'
+	@docker run --rm --entrypoint /bin/sh $(LAMBDA_IMAGE):local -c 'ls /opt/extensions'
+
+# Invocación local con el Runtime Interface Emulator que ya trae la imagen base.
+# Hace falta pasar el entrypoint porque el Dockerfile lo sobrescribe.
+lambda-run:
+	docker run --rm -p 9000:8080 \
+		--entrypoint /usr/local/bin/aws-lambda-rie \
+		$(LAMBDA_IMAGE):local /var/task/bootstrap
+	# curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'

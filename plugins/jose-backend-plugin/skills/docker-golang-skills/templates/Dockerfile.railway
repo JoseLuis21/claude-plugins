@@ -1,0 +1,40 @@
+# Dockerfile para Railway.
+# A diferencia del Dockerfile principal, este NO usa cache mounts de BuildKit
+# (--mount=type=cache) porque el builder de Railway no los soporta y falla.
+# Tampoco copia .env: en Railway las variables se inyectan desde el dashboard.
+#
+# Opcional (pedir el service id al usuario antes de aplicarlo): Railway sí admite
+# cache mounts si el id va namespaced con el service id, p. ej.
+#   RUN --mount=type=cache,id=s/<service-id>-gobuild,target=/root/.cache/go-build ...
+# Con un id equivocado el build revienta, por eso el default es sin cache mounts.
+#
+# Tampoco usa --platform=$BUILDPLATFORM ni los ARG TARGET*: Railway construye en
+# amd64 y no hay garantía de que su builder resuelva esas variables. Si algún día
+# despliegas en runners ARM, cambia GOARCH aquí a mano.
+
+FROM golang:1.25-alpine AS builder
+
+WORKDIR /src
+
+RUN apk add --no-cache ca-certificates tzdata
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY cmd ./cmd
+COPY internal ./internal
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o /out/api ./cmd/api
+
+FROM alpine:3.22
+
+WORKDIR /app
+
+RUN apk add --no-cache ca-certificates tzdata
+
+COPY --from=builder /out/api /app/api
+
+EXPOSE 3000
+
+CMD ["/app/api"]
