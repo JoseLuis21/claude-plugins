@@ -1,0 +1,148 @@
+// Package mysql implementa el gateway de tenant sobre go-sql-driver/mysql.
+package mysql
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"log/slog"
+	"net"
+	"sync"
+	"time"
+
+	driver "github.com/go-sql-driver/mysql"
+
+	"<module>/internal/config"
+	"<module>/internal/core/ports"
+)
+
+// Flags son los interruptores que cambian la forma de las consultas.
+type Flags struct {
+	// StockInitJoinWarehouses replica el INNER JOIN warehouses del servicio
+	// Node en el stock inicial (descarta lineas con bodega NULL/borrada).
+	StockInitJoinWarehouses bool
+	// CostExcludeTransfers deja fuera GE-TR y GE-DC de la valorizacion.
+	CostExcludeTransfers bool
+	// CostConsolidateGTE usa consolidate >= 1 (en vez de = 1) en la
+	// valorizacion, coherente con el stock.
+	CostConsolidateGTE bool
+	// CostLookbackMonths acota Q3 a los ultimos N meses antes de date_ini; los
+	// productos sin compra en esa ventana se rescatan uno a uno. 0 = historia
+	// completa (el comportamiento original, lento con buffer pool frio).
+	CostLookbackMonths int
+	// EMFMetrics publica las duraciones como metricas de CloudWatch. Se apaga
+	// en desarrollo local, donde nadie las lee.
+	EMFMetrics bool
+}
+
+// Pools mantiene un *sql.DB por host+base durante la vida del proceso. En
+// Lambda el entorno de ejecucion se reutiliza entre invocaciones, asi que un
+// tenant recurrente no vuelve a abrir conexiones.
+type Pools struct {
+	cfg    *config.Config
+	flags  Flags
+	logger *slog.Logger
+
+	mu  sync.Mutex
+	dbs map[string]*sql.DB
+}
+
+var _ ports.TenantGatewayFactory = (*Pools)(nil)
+
+// NewPools construye la fabrica de gateways.
+func NewPools(cfg *config.Config, flags Flags, logger *slog.Logger) *Pools {
+	return &Pools{cfg: cfg, flags: flags, logger: logger, dbs: make(map[string]*sql.DB)}
+}
+
+// ForTenant devuelve el gateway de un tenant, abriendo el pool si hace falta.
+func (p *Pools) ForTenant(_ context.Context, node int, dbName string) (ports.TenantGateway, error) {
+	db, err := p.get(node, dbName)
+	if err != nil {
+		return nil, err
+	}
+	return &Gateway{db: db, flags: p.flags, logger: p.logger, node: node, dbName: dbName}, nil
+}
+
+func (p *Pools) get(node int, dbName string) (*sql.DB, error) {
+	if dbName == "" {
+		return nil, fmt.Errorf("nombre de base vacio para el nodo %d", node)
+	}
+	key := fmt.Sprintf("%d:%s", node, dbName)
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if db, ok := p.dbs[key]; ok {
+		return db, nil
+	}
+
+	creds, err := p.cfg.MysqlNode(node)
+	if err != nil {
+		return nil, err
+	}
+	db, err := open(creds, dbName, p.cfg.MysqlPoolLimit, p.cfg.QueryTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("abrir pool del nodo %d base %s: %w", node, dbName, err)
+	}
+	p.dbs[key] = db
+	p.logger.Info("pool MySQL creado", "node", node, "db_name", dbName)
+	return db, nil
+}
+
+// open arma el pool. Decisiones heredadas de bicom-ms-stock-closing, que ya
+// las pago en produccion:
+//
+//   - Las credenciales NO van en el DSN de texto: el driver toma la contrasena
+//     cruda del string sin desescapar, asi que un secreto con `+`, `/` o `=`
+//     llegaba distinto a MySQL y el sintoma era un "Access denied" imposible
+//     de distinguir de una credencial mal configurada. Se asignan al Config.
+//   - parseTime=false a proposito: estas bases tienen invoice_date con
+//     '0000-00-00', que con parseTime=true revienta el Scan. Las fechas se
+//     leen como texto, que es ademas lo unico que el reporte necesita.
+//   - readTimeout acompana al timeout del job. Si fuera menor, una consulta
+//     larga moriria con un `invalid connection` opaco.
+//   - utf8/utf8_general_ci para igualar la conexion de la webapp.
+//   - interpolateParams=true: el driver escapa del lado cliente y manda un
+//     solo round-trip por consulta en vez de prepare/execute/close. Sigue
+//     siendo seguro frente a inyeccion.
+func open(creds config.MysqlNode, dbName string, poolLimit int, queryTimeout time.Duration) (*sql.DB, error) {
+	seconds := int(queryTimeout.Seconds())
+	if seconds < 60 {
+		seconds = 60
+	}
+	cfg, err := driver.ParseDSN(fmt.Sprintf(
+		"tcp(%s)/%s?charset=utf8&collation=utf8_general_ci&parseTime=false&loc=UTC"+
+			"&interpolateParams=true&timeout=10s&readTimeout=%ds&writeTimeout=30s",
+		net.JoinHostPort(creds.Host, creds.Port), dbName, seconds,
+	))
+	if err != nil {
+		return nil, err
+	}
+	cfg.User = creds.User
+	cfg.Passwd = creds.Password
+
+	connector, err := driver.NewConnector(cfg)
+	if err != nil {
+		return nil, err
+	}
+	db := sql.OpenDB(connector)
+	db.SetMaxOpenConns(poolLimit)
+	db.SetMaxIdleConns(2)
+	// Aurora corta conexiones en el failover y Lambda congela el entorno entre
+	// invocaciones: un lifetime corto evita quedarse con conexiones muertas.
+	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(1 * time.Minute)
+	return db, nil
+}
+
+// Close cierra todos los pools. Se usa en cmd/local; en Lambda el entorno
+// simplemente se descarta.
+func (p *Pools) Close() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for key, db := range p.dbs {
+		if err := db.Close(); err != nil {
+			p.logger.Error("error cerrando pool", "key", key, "error", err.Error())
+		}
+		delete(p.dbs, key)
+	}
+}

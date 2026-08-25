@@ -19,7 +19,7 @@ Mientras lo desarrollas en local, apunta el marketplace a esta carpeta:
 
 | Plugin | Skills | Para qué |
 | --- | --- | --- |
-| [`jose-backend-plugin`](plugins/jose-backend-plugin) | `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` | Dockerizar, desplegar en AWS, commitear con Conventional Commits y revisar seguridad OWASP |
+| [`jose-backend-plugin`](plugins/jose-backend-plugin) | `docker-golang-skills`, `github-actions-skills`, `go-hexagonal-multitenant-skills`, `git-commit`, `owasp-security` | Estructurar el servicio en Go, dockerizarlo, desplegarlo en AWS, commitear con Conventional Commits y revisar seguridad OWASP |
 
 ## Estructura
 

@@ -1,0 +1,95 @@
+// Package s3 sube el archivo generado en streaming (multipart).
+package s3
+
+import (
+	"context"
+	"fmt"
+	"io"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+
+	"<module>/internal/core/ports"
+)
+
+// Params son los datos del bucket. Con AccessKey vacio se usa la cadena de
+// credenciales por defecto (el rol de ejecucion de la Lambda).
+type Params struct {
+	Region    string
+	Bucket    string
+	AccessKey string
+	SecretKey string
+	ACL       string
+}
+
+// Store implementa ports.ObjectStore.
+type Store struct {
+	uploader *manager.Uploader
+	bucket   string
+	acl      types.ObjectCannedACL
+}
+
+var _ ports.ObjectStore = (*Store)(nil)
+
+// New construye el cliente.
+func New(ctx context.Context, params Params) (*Store, error) {
+	options := []func(*awsconfig.LoadOptions) error{awsconfig.WithRegion(params.Region)}
+	if params.AccessKey != "" {
+		options = append(options, awsconfig.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")))
+	}
+	cfg, err := awsconfig.LoadDefaultConfig(ctx, options...)
+	if err != nil {
+		return nil, fmt.Errorf("configuracion AWS: %w", err)
+	}
+	client := awss3.NewFromConfig(cfg)
+	uploader := manager.NewUploader(client, func(u *manager.Uploader) {
+		u.PartSize = 8 << 20
+		u.Concurrency = 3
+	})
+	acl := types.ObjectCannedACL(params.ACL)
+	if params.ACL == "" {
+		acl = types.ObjectCannedACLPublicRead
+	}
+	return &Store{uploader: uploader, bucket: params.Bucket, acl: acl}, nil
+}
+
+// Upload conecta el escritor con S3 por un io.Pipe: el productor escribe en
+// su goroutine y el uploader consume. Un io.Pipe no tiene bufer —cada Write
+// bloquea hasta que alguien lee— asi que escribir y subir en la misma
+// goroutine seria un deadlock inmediato. Si el escritor falla, el pipe se
+// cierra con ese error, la subida aborta (multipart incluido) y se devuelve
+// la causa real.
+func (s *Store) Upload(ctx context.Context, key, contentType string, write func(io.Writer) error) (string, error) {
+	reader, writer := io.Pipe()
+	done := make(chan error, 1)
+	go func() {
+		err := write(writer)
+		writer.CloseWithError(err)
+		done <- err
+	}()
+
+	_, uploadErr := s.uploader.Upload(ctx, &awss3.PutObjectInput{
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(key),
+		Body:        reader,
+		ContentType: aws.String(contentType),
+		ACL:         s.acl,
+	})
+	if uploadErr != nil {
+		// Desbloquea al productor si sigue escribiendo.
+		reader.CloseWithError(uploadErr)
+	}
+	writeErr := <-done
+	if writeErr != nil {
+		return "", writeErr
+	}
+	if uploadErr != nil {
+		return "", uploadErr
+	}
+	return key, nil
+}

@@ -1,0 +1,26 @@
+package domain
+
+import "errors"
+
+// BusinessError es un rechazo que el usuario debe ver (queda escrito en Redis)
+// y que reintentar no arregla: el mensaje se da por procesado.
+type BusinessError struct{ Message string }
+
+func (e *BusinessError) Error() string { return e.Message }
+
+// NewBusinessError construye un rechazo visible para el usuario.
+func NewBusinessError(message string) error { return &BusinessError{Message: message} }
+
+// IsBusinessError indica si el error es un rechazo de negocio.
+func IsBusinessError(err error) bool {
+	var business *BusinessError
+	return errors.As(err, &business)
+}
+
+// Mensajes del contrato con el front (los mismos textos que el servicio Node).
+const (
+	MsgPDFTooLong        = "Excede el máximo de tres meses para PDF"
+	MsgCompanyNotFound   = "No se encontraron datos de la empresa"
+	MsgUnsupportedFormat = "Formato de reporte no soportado"
+	MsgGenericError      = "Error generando el reporte"
+)

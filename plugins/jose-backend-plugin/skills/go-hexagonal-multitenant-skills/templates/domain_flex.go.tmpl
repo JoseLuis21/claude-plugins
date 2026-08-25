@@ -1,0 +1,71 @@
+package domain
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+// FlexInt acepta tanto 26 como "26" al deserializar. El publisher es PHP,
+// donde los enteros de la base viajan como string con frecuencia.
+type FlexInt int
+
+func (f *FlexInt) UnmarshalJSON(data []byte) error {
+	raw := strings.Trim(strings.TrimSpace(string(data)), `"`)
+	if raw == "" || raw == "null" {
+		*f = 0
+		return nil
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		// "12.0" y similares: se tolera la parte entera.
+		parsed, ferr := strconv.ParseFloat(raw, 64)
+		if ferr != nil {
+			return fmt.Errorf("no es un entero: %q", raw)
+		}
+		value = int(parsed)
+	}
+	*f = FlexInt(value)
+	return nil
+}
+
+func (f FlexInt) MarshalJSON() ([]byte, error) { return []byte(strconv.Itoa(int(f))), nil }
+
+// Int devuelve el valor nativo.
+func (f FlexInt) Int() int { return int(f) }
+
+// FlexString acepta "2", 2 o null y lo entrega siempre como string. El front
+// compara pdf_excel con '2'/'3' como texto.
+type FlexString string
+
+func (f *FlexString) UnmarshalJSON(data []byte) error {
+	raw := strings.TrimSpace(string(data))
+	if raw == "null" {
+		*f = ""
+		return nil
+	}
+	if len(raw) >= 2 && raw[0] == '"' && raw[len(raw)-1] == '"' {
+		var s string
+		if err := unquote(raw, &s); err != nil {
+			return err
+		}
+		*f = FlexString(s)
+		return nil
+	}
+	*f = FlexString(raw)
+	return nil
+}
+
+func (f FlexString) MarshalJSON() ([]byte, error) { return []byte(strconv.Quote(string(f))), nil }
+
+// String devuelve el valor nativo.
+func (f FlexString) String() string { return string(f) }
+
+func unquote(raw string, out *string) error {
+	value, err := strconv.Unquote(raw)
+	if err != nil {
+		return fmt.Errorf("cadena JSON invalida: %s", raw)
+	}
+	*out = value
+	return nil
+}

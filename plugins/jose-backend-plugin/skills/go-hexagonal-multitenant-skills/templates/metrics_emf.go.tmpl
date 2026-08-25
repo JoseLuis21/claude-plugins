@@ -1,0 +1,124 @@
+// Package metrics emite metricas a CloudWatch en formato EMF (Embedded Metric
+// Format).
+//
+// EMF es una linea de log con un nodo `_aws`: CloudWatch la lee del log group
+// y la convierte en metricas reales. No hay llamada a la API de CloudWatch, no
+// hace falta ningun permiso mas alla de escribir logs, y —lo que importa
+// aca— no necesita salida a internet: esta funcion corre dentro de una VPC sin
+// NAT, donde un PutMetricData se colgaria hasta el timeout.
+//
+// Las metricas viajan en la MISMA linea que el log de la consulta, asi que no
+// hay duplicacion: la linea sirve para leer (Logs Insights) y para graficar
+// (CloudWatch Metrics).
+package metrics
+
+import (
+	"log/slog"
+	"time"
+)
+
+// Namespace de todas las metricas del servicio.
+const Namespace = "Bicom/ReportStockMovements"
+
+// Unidades EMF usadas por el servicio.
+const (
+	UnitMilliseconds = "Milliseconds"
+	UnitCount        = "Count"
+)
+
+// Metric es un valor a graficar.
+type Metric struct {
+	Name  string
+	Unit  string
+	Value float64
+}
+
+// Dimension es un eje de agregacion.
+//
+// Cada COMBINACION distinta de valores crea una metrica propia en CloudWatch,
+// y cada metrica se cobra. Aca las dimensiones son de cardinalidad chica y
+// acotada (6 consultas x 10 nodos). `db_name` NUNCA puede ser dimension: hay
+// miles de tenants y saldrian miles de metricas. Va como propiedad — igual de
+// buscable en Logs Insights, y gratis.
+type Dimension struct {
+	Name  string
+	Value string
+}
+
+// Emit escribe una linea de log que ademas es una metrica.
+//
+// `props` son atributos slog normales (db_name, sql, rows...): quedan en el
+// log, no generan metricas.
+func Emit(logger *slog.Logger, message string, dims []Dimension, values []Metric, props ...any) {
+	if logger == nil || len(values) == 0 {
+		return
+	}
+
+	names := make([]string, len(dims))
+	attrs := make([]any, 0, len(dims)+len(values)+len(props)+1)
+	for index, dim := range dims {
+		names[index] = dim.Name
+		attrs = append(attrs, slog.String(dim.Name, dim.Value))
+	}
+	for _, metric := range values {
+		attrs = append(attrs, slog.Float64(metric.Name, metric.Value))
+	}
+	attrs = append(attrs, props...)
+	attrs = append(attrs, slog.Any("_aws", buildDirective(names, values)))
+
+	logger.Info(message, attrs...)
+}
+
+// buildDirective arma el nodo `_aws`.
+//
+// Se declaran DOS juegos de dimensiones cuando hay mas de una: el completo
+// (p.ej. Query x Node, para ver que nodo esta lento) y solo el primero (Query,
+// para el agregado de toda la flota). Sin el segundo juego, CloudWatch no
+// puede agregar entre nodos sin recalcularlo a mano.
+func buildDirective(names []string, values []Metric) directive {
+	sets := [][]string{names}
+	if len(names) > 1 {
+		sets = append(sets, names[:1])
+	}
+
+	definitions := make([]definition, len(values))
+	for index, metric := range values {
+		definitions[index] = definition{Name: metric.Name, Unit: metric.Unit}
+	}
+
+	return directive{
+		Timestamp: time.Now().UnixMilli(),
+		Metrics: []metricSet{{
+			Namespace:  Namespace,
+			Dimensions: sets,
+			Metrics:    definitions,
+		}},
+	}
+}
+
+// Estructuras del nodo `_aws`, con los nombres exactos que espera CloudWatch.
+type directive struct {
+	Timestamp int64       `json:"Timestamp"`
+	Metrics   []metricSet `json:"CloudWatchMetrics"`
+}
+
+type metricSet struct {
+	Namespace  string       `json:"Namespace"`
+	Dimensions [][]string   `json:"Dimensions"`
+	Metrics    []definition `json:"Metrics"`
+}
+
+type definition struct {
+	Name string `json:"Name"`
+	Unit string `json:"Unit,omitempty"`
+}
+
+// Duration construye la metrica de una duracion, en milisegundos.
+func Duration(name string, elapsed time.Duration) Metric {
+	return Metric{Name: name, Unit: UnitMilliseconds, Value: float64(elapsed.Milliseconds())}
+}
+
+// Count construye una metrica de conteo.
+func Count(name string, value float64) Metric {
+	return Metric{Name: name, Unit: UnitCount, Value: value}
+}

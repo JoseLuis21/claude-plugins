@@ -1,0 +1,91 @@
+// Package redis implementa la maquina de estados del reporte.
+package redis
+
+import (
+	"context"
+	"crypto/tls"
+	"errors"
+	"fmt"
+
+	goredis "github.com/redis/go-redis/v9"
+
+	"<module>/internal/core/domain"
+	"<module>/internal/core/ports"
+)
+
+// Params son los datos de conexion.
+type Params struct {
+	Host     string
+	Port     string
+	Password string
+	DB       int
+	// TLS lo exige ElastiCache con cifrado en transito; los nodos presentan
+	// certificados que no siempre validan contra el hostname, de ahi
+	// InsecureSkipVerify configurable.
+	TLS                bool
+	InsecureSkipVerify bool
+	// QueueName forma parte de la llave: Report[{bd_id}][{QueueName}].
+	QueueName string
+}
+
+// StateStore implementa ports.StateStore.
+type StateStore struct {
+	client    *goredis.Client
+	queueName string
+}
+
+var _ ports.StateStore = (*StateStore)(nil)
+
+// New abre el cliente y verifica que responda.
+func New(ctx context.Context, params Params) (*StateStore, error) {
+	options := &goredis.Options{
+		Addr:     params.Host + ":" + params.Port,
+		Password: params.Password,
+		DB:       params.DB,
+	}
+	if params.TLS {
+		options.TLSConfig = &tls.Config{InsecureSkipVerify: params.InsecureSkipVerify} //nolint:gosec // configurable por entorno
+	}
+	client := goredis.NewClient(options)
+	if err := client.Ping(ctx).Err(); err != nil {
+		client.Close()
+		return nil, fmt.Errorf("redis %s: %w", options.Addr, err)
+	}
+	return &StateStore{client: client, queueName: params.QueueName}, nil
+}
+
+// Key arma la llave del contrato con el front.
+func (s *StateStore) Key(companyID string) string {
+	return "Report[" + companyID + "][" + s.queueName + "]"
+}
+
+// Load lee y parsea la peticion. nil si no existe.
+func (s *StateStore) Load(ctx context.Context, companyID string) (*domain.ReportRequest, error) {
+	raw, err := s.client.Get(ctx, s.Key(companyID)).Bytes()
+	if errors.Is(err, goredis.Nil) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return domain.ParseReportRequest(companyID, raw)
+}
+
+// Save reescribe el objeto completo (sin TTL, igual que el servicio Node).
+func (s *StateStore) Save(ctx context.Context, request *domain.ReportRequest) error {
+	payload, err := request.JSON()
+	if err != nil {
+		return err
+	}
+	return s.client.Set(ctx, s.Key(request.CompanyID), payload, 0).Err()
+}
+
+// Close cierra el cliente.
+func (s *StateStore) Close() error { return s.client.Close() }
+
+// ReadOnly envuelve un StateStore para que Save no escriba. Lo usa cmd/local:
+// lee los filtros reales de Redis sin tocar el estado que ve el usuario.
+type ReadOnly struct{ ports.StateStore }
+
+// Save no hace nada.
+func (ReadOnly) Save(context.Context, *domain.ReportRequest) error { return nil }

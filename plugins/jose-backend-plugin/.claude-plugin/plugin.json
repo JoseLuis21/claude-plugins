@@ -1,7 +1,7 @@
 {
   "name": "jose-backend-plugin",
   "displayName": "Jose Backend Plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Toolkit de backend: Dockerfile con cache de BuildKit y multi-arch, workflows de GitHub Actions para desplegar en ECS/Lambda/ECR, commits convencionales y revisión de seguridad OWASP Top 10.",
   "author": {
     "name": "Jose Luis",
@@ -10,5 +10,19 @@
   },
   "repository": "https://github.com/JoseLuis21/jose-backend-plugin",
   "license": "MIT",
-  "keywords": ["docker", "golang", "github-actions", "aws", "ecs", "lambda", "ecr", "railway", "ci-cd", "git", "conventional-commits", "owasp", "security"]
+  "keywords": [
+    "docker",
+    "golang",
+    "github-actions",
+    "aws",
+    "ecs",
+    "lambda",
+    "ecr",
+    "railway",
+    "ci-cd",
+    "git",
+    "conventional-commits",
+    "owasp",
+    "security"
+  ]
 }

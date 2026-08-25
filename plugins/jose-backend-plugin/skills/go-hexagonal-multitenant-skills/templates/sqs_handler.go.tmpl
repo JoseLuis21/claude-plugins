@@ -1,0 +1,130 @@
+// Package sqslambda es el adaptador de entrada: una Lambda disparada por SQS.
+package sqslambda
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/aws/aws-lambda-go/events"
+
+	"<module>/internal/core/domain"
+	"<module>/internal/core/services"
+	"<module>/internal/platform/metrics"
+)
+
+// Handler procesa un lote de SQS. Devuelve fallos parciales por mensaje
+// (ReportBatchItemFailures): los que fallan por infraestructura vuelven a la
+// cola y, agotado maxReceiveCount, van a la DLQ de SQS. Los rechazos de
+// negocio y los mensajes ilegibles se dan por procesados (el usuario ya ve el
+// error en Redis, o no hay a quien avisarle).
+type Handler struct {
+	service        *services.ReportService
+	deadlineMargin time.Duration
+	emfMetrics     bool
+	logger         *slog.Logger
+}
+
+// New construye el handler.
+func New(service *services.ReportService, deadlineMargin time.Duration, emfMetrics bool, logger *slog.Logger) *Handler {
+	return &Handler{service: service, deadlineMargin: deadlineMargin, emfMetrics: emfMetrics, logger: logger}
+}
+
+// Desenlaces posibles de un mensaje. Es la dimension de las metricas del
+// reporte: tres valores, cardinalidad fija.
+const (
+	outcomeOK       = "ok"
+	outcomeRejected = "rejected" // rechazo de negocio: el usuario lo ve en Redis
+	outcomeError    = "error"    // fallo de infraestructura: vuelve a la cola
+	outcomeInvalid  = "invalid"  // mensaje ilegible: se descarta
+)
+
+// report publica el desenlace de un mensaje como metrica.
+//
+// `ReportCount` por desenlace es lo que permite alarmar sobre la tasa de
+// error sin leer un solo log; `ReportDurationMs` es el tiempo de punta a
+// punta, que es el que ve el usuario esperando su archivo.
+func (h *Handler) report(outcome string, elapsed time.Duration, rows int, props ...any) {
+	if !h.emfMetrics {
+		return
+	}
+	metrics.Emit(h.logger, "reporte procesado (metrica)",
+		[]metrics.Dimension{{Name: "Outcome", Value: outcome}},
+		[]metrics.Metric{
+			metrics.Count("ReportCount", 1),
+			metrics.Duration("ReportDurationMs", elapsed),
+			metrics.Count("ReportRows", float64(rows)),
+		}, props...)
+}
+
+// Handle es la funcion que registra lambda.Start.
+func (h *Handler) Handle(ctx context.Context, event events.SQSEvent) (events.SQSEventResponse, error) {
+	var response events.SQSEventResponse
+	for _, record := range event.Records {
+		if err := h.handleRecord(ctx, record); err != nil {
+			response.BatchItemFailures = append(response.BatchItemFailures,
+				events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
+		}
+	}
+	return response, nil
+}
+
+func (h *Handler) handleRecord(parent context.Context, record events.SQSMessage) (err error) {
+	logger := h.logger.With("message_id", record.MessageId)
+
+	// Un panic en un mensaje no puede llevarse el lote entero: se registra y
+	// ese mensaje vuelve a la cola.
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			logger.Error("panic procesando el mensaje", "panic", fmt.Sprint(recovered))
+			err = fmt.Errorf("panic: %v", recovered)
+		}
+	}()
+
+	started := time.Now()
+
+	var message domain.Message
+	if uerr := json.Unmarshal([]byte(record.Body), &message); uerr != nil {
+		logger.Error("mensaje ilegible, se descarta", "error", uerr.Error(), "body", record.Body)
+		h.report(outcomeInvalid, time.Since(started), 0)
+		return nil
+	}
+	if verr := message.Validate(); verr != nil {
+		logger.Error("mensaje invalido, se descarta", "error", verr.Error(), "body", record.Body)
+		h.report(outcomeInvalid, time.Since(started), 0)
+		return nil
+	}
+
+	// Se reserva un margen antes del deadline de la Lambda para alcanzar a
+	// escribir el estado de error en Redis. Si la funcion muriera por timeout
+	// el front quedaria en "procesando" para siempre.
+	ctx := parent
+	if deadline, ok := parent.Deadline(); ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(parent, deadline.Add(-h.deadlineMargin))
+		defer cancel()
+	}
+
+	result, err := h.service.Generate(ctx, message)
+	elapsed := time.Since(started)
+
+	outcome := outcomeOK
+	switch {
+	case err != nil:
+		outcome = outcomeError
+	case result.Error != "":
+		outcome = outcomeRejected
+	}
+	// El modo de apertura (legacy|snapshot) va como propiedad, no como
+	// dimension: interesa para leer un caso puntual, no para graficar.
+	h.report(outcome, elapsed, result.Rows, slog.String("opening_stock", result.Mode))
+
+	logger.Info("mensaje procesado",
+		"company_id", message.CompanyID(), "db_name", message.BdName,
+		"rows", result.Rows, "url", result.URL, "rejected", result.Error,
+		"duration_ms", elapsed.Milliseconds(),
+		"retry", err != nil)
+	return err
+}
