@@ -1,0 +1,10 @@
+# Contenido de terceros
+
+`plugins/jose-backend-plugin/skills/git-commit/SKILL.md` se redistribuye desde
+[github/awesome-copilot](https://github.com/github/awesome-copilot)
+(`skills/git-commit/SKILL.md`), bajo licencia MIT. Se conserva su autoría y su
+aviso de licencia originales.
+
+El resto del contenido de este repositorio es propio y va bajo el `LICENSE` de
+la raíz. `skills/owasp-security` está escrita sobre el estándar público
+[OWASP Top 10:2021](https://owasp.org/Top10/), publicado por la OWASP Foundation.
