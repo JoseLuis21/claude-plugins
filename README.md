@@ -21,7 +21,7 @@ En local, mientras lo desarrollas:
 | Plugin | Instalar | Skills |
 | --- | --- | --- |
 | [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `mysql`, `docker-golang-skills`, `github-actions-skills`, `owasp-security` |
-| [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security` |
+| [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security-frontend` |
 | [`common`](plugins/common) | *(dependencia)* | `git-commit` |
 
 ## El resto del stack
@@ -125,67 +125,37 @@ Vendorizar sí tiene sentido en el caso contrario: cuando el origen es una skill
 un repo que **no** publica plugin. Es lo que pasa con `shadcn`, `vercel-react-best-practices` y
 `git-commit`, que están copiadas aquí y las re-trae [`scripts/sync-skills.sh`](scripts/sync-skills.sh).
 
-## Compatibilidad universal
+## Compatibilidad entre clientes
 
-Cada plugin cumple a la vez con **Claude Code** y con el estándar
-[Agent Plugins 1.1.0](https://agent-plugins.org/), sin duplicar nada: las skills viven en
-`skills/<nombre>/SKILL.md`, que es la ruta que ambos usan, y solo el manifiesto está por
-duplicado porque cada especificación lo busca en un sitio distinto.
+Un mismo paquete, cuatro clientes, sin duplicar una sola skill. Cada especificación busca su
+manifiesto en un sitio distinto, pero todas leen las skills de `skills/<nombre>/SKILL.md`:
 
 ```
-plugins/backend/
+plugins/<plugin>/
 ├── plugin.json                    ← Agent Plugins 1.1.0 (raíz del plugin)
 ├── .claude-plugin/plugin.json     ← Claude Code
-└── skills/<nombre>/SKILL.md       ← las dos leen de aquí
+├── .cursor-plugin/plugin.json     ← Cursor
+├── .codex-plugin/plugin.json      ← Codex
+└── skills/<nombre>/SKILL.md       ← todas leen de aquí
 ```
 
-Un cliente que implemente Agent Plugins carga el directorio del plugin tal cual. Claude Code
-ignora el `plugin.json` de la raíz y lee el suyo. Al tocar la versión de un plugin, **súbela en
-los dos manifiestos**.
+**OpenCode va aparte**: no tiene concepto de plugin, lee skills sueltas de `.opencode/skills/`
+en la raíz del repo. Ahí van **enlaces simbólicos** a las skills reales, no copias, para que no
+haya contenido duplicado que se desincronice. Regenéralos con
+[`scripts/sync-opencode.sh`](scripts/sync-opencode.sh) al añadir, quitar o renombrar una skill.
 
-Las skills cumplen además la [especificación de Agent Skills](https://agentskills.io/specification):
-`name` en minúsculas y coincidiendo con el directorio, `description` de menos de 1024 caracteres,
-y frontmatter YAML válido.
+Tres consecuencias de esto que conviene tener presentes:
 
-## Cuánto cuesta
+- **Los nombres de las skills deben ser únicos en todo el catálogo**, no solo dentro de su
+  plugin, porque OpenCode las aplana en una carpeta. Por eso la de seguridad del frontend se
+  llama `owasp-security-frontend` y no `owasp-security`. `check-conformance.sh` lo verifica.
+- **Los enlaces simbólicos pueden no resolverse en Windows** según la configuración de git. Si
+  te afecta, cambia el script para que copie en vez de enlazar.
+- **`dependencies` solo lo entiende Claude Code.** En los demás clientes, `frontend` carga sin
+  `common`: sus skills funcionan, pero `git-commit` hay que cargarla aparte.
 
-Cada skill carga su `name` y su `description` en **cada arranque**, use o no. El resto —el
-cuerpo del `SKILL.md` y sus referencias— entra solo cuando la skill se dispara, y las
-referencias se leen de una en una según el tema.
-
-| Plugin | Skills | Disco | Archivos | Siempre activo | Bajo demanda |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `backend` | 6 | 336K | 53 | **~976 tok** | ~58,890 tok |
-| `common` | 1 | 16K | 4 | **~108 tok** | ~799 tok |
-| `frontend` | 3 | 552K | 92 | **~324 tok** | ~82,016 tok |
-| **los tres** | **10** | | | **~1,408 tok** | ~141,705 tok |
-
-Instalar solo `frontend` sale por **~432 tokens** con su dependencia incluida. Los tres juntos
-cuestan ~1.400 tokens fijos por tener a mano ~142.000 de material que entra bajo demanda.
-
-Regenera la tabla con [`scripts/measure.sh`](scripts/measure.sh) cuando cambien las skills.
-
-## Skills compartidas
-
-`git-commit` sirve igual escribiendo Go que React, así que en vez de duplicarla vive en el plugin
-`common`, y los otros dos lo declaran como dependencia:
-
-```json
-// plugins/backend/.claude-plugin/plugin.json
-"dependencies": ["common"]
-```
-
-Instalar cualquiera de los dos la arrastra sola — `frontend@jl-stack` responde
-`✔ (+ 1 dependency: common)` — así que cada plugin sigue siendo atómico sin que la skill esté
-por duplicado. Se invoca como `/common:git-commit`.
-
-Dos avisos:
-
-- **`dependencies` no es portable.** El manifiesto de Agent Plugins es cerrado y no admite ese
-  campo, así que va solo en el de Claude Code. Un cliente del estándar cargaría `frontend` sin
-  `common`: el resto de skills funciona, `git-commit` no estaría.
-- Al desinstalar el último plugin que depende de `common`, Claude Code avisa de que queda
-  huérfana y se limpia con `claude plugin prune`.
+Al tocar la versión de un plugin, **súbela en los cuatro manifiestos** — `check-conformance.sh`
+comprueba que no se desalineen.
 
 ## Estructura
 
@@ -197,6 +167,7 @@ plugins/<plugin>/
 scripts/sync-skills.sh              re-trae las skills que se mantienen fuera de este repo
 scripts/check-conformance.sh        valida los dos formatos y la spec de Agent Skills
 scripts/measure.sh                  peso en disco y coste de contexto por plugin
+scripts/sync-opencode.sh            regenera los enlaces de .opencode/skills/
 ```
 
 ## Añadir un plugin nuevo

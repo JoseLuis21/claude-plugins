@@ -1,6 +1,5 @@
 {
   "name": "frontend",
-  "displayName": "Frontend Toolkit",
   "version": "0.4.0",
   "description": "Cuatro skills para aplicaciones React/Next.js: componentes con shadcn/ui, optimización de rendimiento de Vercel Engineering, seguridad OWASP en el navegador y Conventional Commits.",
   "author": {
@@ -8,6 +7,7 @@
     "email": "josedevelopcl@gmail.com",
     "url": "https://github.com/JoseLuis21"
   },
+  "homepage": "https://github.com/JoseLuis21/claude-plugins",
   "repository": "https://github.com/JoseLuis21/claude-plugins",
   "license": "MIT",
   "keywords": [
@@ -23,7 +23,17 @@
     "security",
     "conventional-commits"
   ],
-  "dependencies": [
-    "common"
-  ]
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Frontend Toolkit",
+    "shortDescription": "Cuatro skills para aplicaciones React/Next.js",
+    "longDescription": "Cuatro skills para aplicaciones React/Next.js: componentes con shadcn/ui, optimización de rendimiento de Vercel Engineering, seguridad OWASP en el navegador y Conventional Commits.",
+    "developerName": "Jose Luis",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/JoseLuis21/claude-plugins"
+  }
 }

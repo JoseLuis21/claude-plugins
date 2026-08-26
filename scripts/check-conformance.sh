@@ -53,6 +53,15 @@ for plug in sorted(pathlib.Path("plugins").iterdir()):
         if e:
             print(f"    {s.name}: ✘ {'; '.join(e)}"); fails += 1
 
+# OpenCode aplana las skills: sus nombres deben ser únicos en todo el catálogo
+vistos = {}
+for plug in sorted(pathlib.Path("plugins").iterdir()):
+    for s in sorted((plug/"skills").iterdir()):
+        if s.name in vistos:
+            print(f"  ✘ nombre repetido '{s.name}': {vistos[s.name]} y {plug.name} — "
+                  f"chocarían en .opencode/skills/"); fails += 1
+        vistos[s.name] = plug.name
+
 print("\nTodo conforme." if not fails else f"\n{fails} problema(s).")
 sys.exit(1 if fails else 0)
 PY

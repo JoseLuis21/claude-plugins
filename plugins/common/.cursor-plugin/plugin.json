@@ -1,8 +1,8 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.1.0/plugin.schema.json",
   "name": "common",
+  "displayName": "Common",
   "version": "0.2.0",
-  "description": "Skills transversales que comparten los demás plugins de este catálogo.",
+  "description": "Skills transversales que comparten los demás plugins de este catálogo. Se instala sola como dependencia; no hace falta pedirla.",
   "author": {
     "name": "Jose Luis",
     "email": "josedevelopcl@gmail.com",
@@ -14,5 +14,7 @@
   "keywords": [
     "git",
     "conventional-commits"
-  ]
+  ],
+  "skills": "./skills/",
+  "category": "developer-tools"
 }

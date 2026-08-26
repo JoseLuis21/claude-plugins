@@ -8,6 +8,7 @@
     "email": "josedevelopcl@gmail.com",
     "url": "https://github.com/JoseLuis21"
   },
+  "homepage": "https://github.com/JoseLuis21/claude-plugins",
   "repository": "https://github.com/JoseLuis21/claude-plugins",
   "license": "MIT",
   "keywords": [
@@ -30,7 +31,6 @@
     "owasp",
     "security"
   ],
-  "dependencies": [
-    "common"
-  ]
+  "skills": "./skills/",
+  "category": "developer-tools"
 }

@@ -1,5 +1,5 @@
 ---
-name: owasp-security
+name: owasp-security-frontend
 description: Revisa o endurece una aplicación web de frontend (React, Next.js, SPA) frente al OWASP Top 10 y a los riesgos propios del navegador. Úsala cuando pidan revisar la seguridad del cliente, prevenir XSS o inyección en el DOM, configurar una CSP o cabeceras de seguridad, decidir dónde guardar el token de sesión, evitar filtrar secretos en el bundle, proteger formularios contra CSRF, revisar Server Actions o route handlers de Next.js, auditar dependencias de npm, o revisar una app antes de sacarla a producción.
 ---
 

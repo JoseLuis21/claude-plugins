@@ -1,6 +1,5 @@
 {
   "name": "backend",
-  "displayName": "Backend Toolkit",
   "version": "0.9.0",
   "description": "Seis skills para servicios backend en Go: arquitectura hexagonal multi-tenant, optimización de queries MySQL, Docker con cache, deploys a AWS desde GitHub Actions, Conventional Commits y OWASP Top 10.",
   "author": {
@@ -8,6 +7,7 @@
     "email": "josedevelopcl@gmail.com",
     "url": "https://github.com/JoseLuis21"
   },
+  "homepage": "https://github.com/JoseLuis21/claude-plugins",
   "repository": "https://github.com/JoseLuis21/claude-plugins",
   "license": "MIT",
   "keywords": [
@@ -30,7 +30,17 @@
     "owasp",
     "security"
   ],
-  "dependencies": [
-    "common"
-  ]
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Backend Toolkit",
+    "shortDescription": "Seis skills para servicios backend en Go",
+    "longDescription": "Seis skills para servicios backend en Go: arquitectura hexagonal multi-tenant, optimización de queries MySQL, Docker con cache, deploys a AWS desde GitHub Actions, Conventional Commits y OWASP Top 10.",
+    "developerName": "Jose Luis",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/JoseLuis21/claude-plugins"
+  }
 }
