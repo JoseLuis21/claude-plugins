@@ -1,6 +1,6 @@
 # frontend
 
-`frontend@JoseLuis21`
+`frontend@jl-stack`
 
 Cuatro skills para aplicaciones React/Next.js: construir la UI, que vaya rápida, que no tenga
 agujeros y commitear con criterio.

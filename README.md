@@ -6,8 +6,8 @@ Marketplace de plugins de Claude Code. Un plugin por área de trabajo: instalas 
 
 ```bash
 /plugin marketplace add JoseLuis21/claude-plugins
-/plugin install backend@JoseLuis21
-/plugin install frontend@JoseLuis21
+/plugin install backend@jl-stack
+/plugin install frontend@jl-stack
 ```
 
 En local, mientras lo desarrollas:
@@ -20,8 +20,8 @@ En local, mientras lo desarrollas:
 
 | Plugin | Instalar | Skills |
 | --- | --- | --- |
-| [`backend`](plugins/backend) | `backend@JoseLuis21` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` |
-| [`frontend`](plugins/frontend) | `frontend@JoseLuis21` | `shadcn`, `vercel-react-best-practices`, `owasp-security`, `git-commit` |
+| [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` |
+| [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security`, `git-commit` |
 
 ## Estructura
 

@@ -1,12 +1,12 @@
 {
-  "name": "JoseLuis21",
+  "name": "jl-stack",
   "owner": {
     "name": "Jose Luis",
     "email": "josedevelopcl@gmail.com",
     "url": "https://github.com/JoseLuis21"
   },
   "description": "Plugins de Claude Code de Jose Luis: un catálogo por área de trabajo.",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
