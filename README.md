@@ -64,20 +64,32 @@ esas dos skills, sí valen la pena.
 
 ### Herramientas externas
 
-Los plugins escriben configuración y comandos, pero no instalan nada. Las skills de este
-catálogo asumen que tienes a mano:
+Los plugins escriben configuración y comandos, pero **no instalan binarios**. Hay dos listas
+distintas: lo que asumen las skills de este catálogo, y lo que necesitan los plugins de arriba.
+
+**Para las skills de este repo:**
 
 | Binario | Lo usan | Para qué |
 | --- | --- | --- |
 | `docker` + `buildx` | `docker-golang-skills` | build multi-arch y cache de BuildKit |
-| `aws` | `github-actions-skills`, `go-hexagonal-multitenant-skills` | ECR, ECS, Lambda, CloudWatch. Ningún plugin lo instala, tampoco los de AWS |
+| `aws` | `github-actions-skills`, `go-hexagonal-multitenant-skills` | ECR, ECS, Lambda, CloudWatch |
 | `go` | las de backend | compilar y `go test` |
 | `govulncheck` | `owasp-security` | escaneo de vulnerabilidades en CI |
 | `mysql` | `mysql-query-optimization-skills` | `EXPLAIN ANALYZE` contra el servidor |
 | `npx` / `npm` (o `pnpm`, `bun`) | `shadcn`, `vercel-react-best-practices` | CLI de shadcn, build y auditoría |
 | `gh` | `git-commit` y el flujo de PRs | operaciones sobre GitHub |
 
-Y si instalas `gopls-lsp`, necesitas el binario `gopls`; el plugin no lo trae.
+**Para los plugins del stack:**
+
+| Plugin | Necesita | Nota |
+| --- | --- | --- |
+| `cloudflare@cloudflare` | `npm` | **no hace falta instalar Wrangler a mano**: la skill lo detecta y lo añade al proyecto con `npm install -D wrangler@latest`. El plugin además conecta 5 servidores MCP remotos por HTTP, sin binarios locales |
+| `aws-core` | `uv` (aporta `uvx`) | su MCP arranca con `uvx mcp-proxy-for-aws`. Sin `uv` el servidor no levanta y el fallo sale en la pestaña **Errors** de `/plugin`. `brew install uv` |
+| `gopls-lsp` | `gopls` | el plugin no lo trae |
+
+El `aws` CLI aparece solo en la primera tabla a propósito: los plugins de AWS operan sobre todo
+por MCP, pero los workflows y los runbooks que escriben las skills de este repo se ejecutan con
+el CLI.
 
 ## Plugins de terceros
 
