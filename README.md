@@ -1,11 +1,11 @@
-# jose-plugins
+# claude-plugins
 
 Marketplace de plugins de Claude Code. Un plugin por área de trabajo: instalas el que te sirve.
 
 ## Instalar
 
 ```bash
-/plugin marketplace add JoseLuis21/jose-plugins
+/plugin marketplace add JoseLuis21/claude-plugins
 /plugin install backend@JoseLuis21
 /plugin install frontend@JoseLuis21
 ```
@@ -13,7 +13,7 @@ Marketplace de plugins de Claude Code. Un plugin por área de trabajo: instalas 
 En local, mientras lo desarrollas:
 
 ```bash
-/plugin marketplace add /Users/joseluis/Desktop/projects/jose/jose-plugins
+/plugin marketplace add /Users/joseluis/Desktop/projects/jose/claude-plugins
 ```
 
 ## Plugins

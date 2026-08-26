@@ -8,7 +8,19 @@
     "email": "josedevelopcl@gmail.com",
     "url": "https://github.com/JoseLuis21"
   },
-  "repository": "https://github.com/JoseLuis21/jose-plugins",
+  "repository": "https://github.com/JoseLuis21/claude-plugins",
   "license": "MIT",
-  "keywords": ["react","nextjs","shadcn","ui","components","performance","core-web-vitals","frontend","owasp","security","conventional-commits"]
+  "keywords": [
+    "react",
+    "nextjs",
+    "shadcn",
+    "ui",
+    "components",
+    "performance",
+    "core-web-vitals",
+    "frontend",
+    "owasp",
+    "security",
+    "conventional-commits"
+  ]
 }
