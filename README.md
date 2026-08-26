@@ -23,6 +23,28 @@ En local, mientras lo desarrollas:
 | [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` |
 | [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security`, `git-commit` |
 
+## Compatibilidad universal
+
+Cada plugin cumple a la vez con **Claude Code** y con el estándar
+[Agent Plugins 1.1.0](https://agent-plugins.org/), sin duplicar nada: las skills viven en
+`skills/<nombre>/SKILL.md`, que es la ruta que ambos usan, y solo el manifiesto está por
+duplicado porque cada especificación lo busca en un sitio distinto.
+
+```
+plugins/backend/
+├── plugin.json                    ← Agent Plugins 1.1.0 (raíz del plugin)
+├── .claude-plugin/plugin.json     ← Claude Code
+└── skills/<nombre>/SKILL.md       ← las dos leen de aquí
+```
+
+Un cliente que implemente Agent Plugins carga el directorio del plugin tal cual. Claude Code
+ignora el `plugin.json` de la raíz y lee el suyo. Al tocar la versión de un plugin, **súbela en
+los dos manifiestos**.
+
+Las skills cumplen además la [especificación de Agent Skills](https://agentskills.io/specification):
+`name` en minúsculas y coincidiendo con el directorio, `description` de menos de 1024 caracteres,
+y frontmatter YAML válido.
+
 ## Estructura
 
 ```
@@ -31,6 +53,7 @@ plugins/<plugin>/
   .claude-plugin/plugin.json        manifiesto del plugin
   skills/<skill>/SKILL.md           una skill por carpeta
 scripts/sync-skills.sh              re-trae las skills que se mantienen fuera de este repo
+scripts/check-conformance.sh        valida los dos formatos y la spec de Agent Skills
 ```
 
 ## Añadir un plugin nuevo
