@@ -45,6 +45,8 @@ son lo que uso alrededor de estos plugins. Se instalan desde su propio marketpla
 /plugin install mongodb@claude-plugins-official         # consultas, esquemas, índices
 /plugin install skill-creator@claude-plugins-official   # crear, medir y afinar skills
 /plugin install atlassian@claude-plugins-official       # Jira y Confluence
+/plugin install aws-core@claude-plugins-official        # IaC, servicios base, tareas comunes
+/plugin install aws-serverless@claude-plugins-official  # diseñar, desplegar y depurar Lambdas
 
 # Workers, Wrangler, D1, R2, Durable Objects, Agents SDK
 /plugin marketplace add cloudflare/skills
@@ -55,6 +57,11 @@ Además de estos, mantengo skills sueltas por proveedor en `~/.claude/skills/`. 
 y no se distribuyen desde aquí; si alguna madura y deja de ser específica de un proyecto, acaba
 en uno de los plugins de este catálogo.
 
+El catálogo oficial trae además `deploy-on-aws` y `databases-on-aws`. No los uso porque compiten
+por los mismos disparos que `github-actions-skills` y `mysql-query-optimization-skills` de este
+repo, que llevan las convenciones concretas en vez de recomendaciones genéricas. Si no tienes
+esas dos skills, sí valen la pena.
+
 ### Herramientas externas
 
 Los plugins escriben configuración y comandos, pero no instalan nada. Las skills de este
@@ -63,7 +70,7 @@ catálogo asumen que tienes a mano:
 | Binario | Lo usan | Para qué |
 | --- | --- | --- |
 | `docker` + `buildx` | `docker-golang-skills` | build multi-arch y cache de BuildKit |
-| `aws` | `github-actions-skills`, `go-hexagonal-multitenant-skills` | ECR, ECS, Lambda, CloudWatch |
+| `aws` | `github-actions-skills`, `go-hexagonal-multitenant-skills` | ECR, ECS, Lambda, CloudWatch. Ningún plugin lo instala, tampoco los de AWS |
 | `go` | las de backend | compilar y `go test` |
 | `govulncheck` | `owasp-security` | escaneo de vulnerabilidades en CI |
 | `mysql` | `mysql-query-optimization-skills` | `EXPLAIN ANALYZE` contra el servidor |
