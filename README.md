@@ -139,6 +139,24 @@ Las skills cumplen además la [especificación de Agent Skills](https://agentski
 `name` en minúsculas y coincidiendo con el directorio, `description` de menos de 1024 caracteres,
 y frontmatter YAML válido.
 
+## Cuánto cuesta
+
+Cada skill carga su `name` y su `description` en **cada arranque**, use o no. El resto —el
+cuerpo del `SKILL.md` y sus referencias— entra solo cuando la skill se dispara, y las
+referencias se leen de una en una según el tema.
+
+| Plugin | Skills | Disco | Archivos | Siempre activo | Bajo demanda |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `backend` | 6 | 336K | 53 | **~976 tok** | ~58,890 tok |
+| `common` | 1 | 16K | 4 | **~108 tok** | ~799 tok |
+| `frontend` | 3 | 552K | 92 | **~324 tok** | ~82,016 tok |
+| **los tres** | **10** | | | **~1,408 tok** | ~141,705 tok |
+
+Instalar solo `frontend` sale por **~432 tokens** con su dependencia incluida. Los tres juntos
+cuestan ~1.400 tokens fijos por tener a mano ~142.000 de material que entra bajo demanda.
+
+Regenera la tabla con [`scripts/measure.sh`](scripts/measure.sh) cuando cambien las skills.
+
 ## Skills compartidas
 
 `git-commit` sirve igual escribiendo Go que React, así que en vez de duplicarla vive en el plugin
@@ -170,6 +188,7 @@ plugins/<plugin>/
   skills/<skill>/SKILL.md           una skill por carpeta
 scripts/sync-skills.sh              re-trae las skills que se mantienen fuera de este repo
 scripts/check-conformance.sh        valida los dos formatos y la spec de Agent Skills
+scripts/measure.sh                  peso en disco y coste de contexto por plugin
 ```
 
 ## Añadir un plugin nuevo
