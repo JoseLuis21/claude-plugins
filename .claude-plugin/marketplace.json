@@ -5,7 +5,7 @@
     "email": "josedevelopcl@gmail.com",
     "url": "https://github.com/JoseLuis21"
   },
-  "description": "Plugins de Claude Code para trabajo de backend: Docker, GitHub Actions, AWS, commits convencionales y seguridad OWASP.",
+  "description": "Marketplace de un solo plugin: skills de Claude Code para el ciclo completo de un servicio backend en Go.",
   "version": "0.4.0",
   "metadata": {
     "pluginRoot": "./plugins"
@@ -15,7 +15,7 @@
       "name": "jose-backend-plugin",
       "displayName": "Jose Backend Plugin",
       "source": "./plugins/jose-backend-plugin",
-      "description": "Toolkit de backend: Dockerfile con cache de BuildKit y multi-arch, workflows de GitHub Actions para desplegar en ECS/Lambda/ECR, commits convencionales y revisión de seguridad OWASP Top 10.",
+      "description": "Seis skills para servicios backend en Go: arquitectura hexagonal multi-tenant, optimización de queries MySQL, Docker con cache, deploys a AWS desde GitHub Actions, Conventional Commits y OWASP Top 10.",
       "version": "0.4.0",
       "author": {
         "name": "Jose Luis",
