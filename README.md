@@ -8,7 +8,6 @@ Marketplace de plugins de Claude Code. Un plugin por área de trabajo: instalas 
 /plugin marketplace add JoseLuis21/claude-plugins
 /plugin install backend@jl-stack
 /plugin install frontend@jl-stack
-/plugin install impeccable@jl-stack
 ```
 
 En local, mientras lo desarrollas:
@@ -23,7 +22,6 @@ En local, mientras lo desarrollas:
 | --- | --- | --- |
 | [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` |
 | [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security`, `git-commit` |
-| [`impeccable`](https://github.com/pbakaus/impeccable) ↗ | `impeccable@jl-stack` | de terceros — 1 skill de diseño + 23 comandos, de Paul Bakaus (Apache-2.0) |
 
 ## El resto del stack
 
@@ -34,6 +32,10 @@ son lo que uso alrededor de estos plugins. Se instalan desde su propio marketpla
 # memoria persistente entre sesiones y compactaciones
 /plugin marketplace add Gentleman-Programming/engram
 /plugin install engram@engram
+
+# lenguaje de diseño para frontend: 1 skill + 23 comandos
+/plugin marketplace add pbakaus/impeccable
+/plugin install impeccable@impeccable
 
 # integración con la terminal Warp
 /plugin marketplace add warpdotdev/claude-code-warp
@@ -91,10 +93,13 @@ El `aws` CLI aparece solo en la primera tabla a propósito: los plugins de AWS o
 por MCP, pero los workflows y los runbooks que escriben las skills de este repo se ejecutan con
 el CLI.
 
-## Plugins de terceros
+## Qué entra en este catálogo
 
-El catálogo puede **referenciar** plugins que no viven aquí, sin copiarlos. Se declaran con una
-fuente `git-subdir` o `github` apuntando a su repo:
+Solo plugins propios. Los de terceros se instalan desde su origen, como los de la sección
+anterior: así se actualizan cuando su autor publica, y no hay que redistribuir su código ni
+cumplir con su licencia.
+
+Técnicamente el catálogo *podría* referenciarlos sin copiarlos, con una fuente `git-subdir`:
 
 ```json
 {
@@ -103,9 +108,13 @@ fuente `git-subdir` o `github` apuntando a su repo:
 }
 ```
 
-Claude Code los descarga de su origen al instalarlos, así que se actualizan por su cuenta y este
-repo no crece. Es la forma correcta de curar el trabajo de otros: nada de vendorizar un plugin
-que ya se publica solo.
+Pero declarar ahí una `version` **fija** esa versión para todo el que instale desde aquí, hasta
+que se edite el número a mano. Convertirse en el cuello de botella de las actualizaciones de un
+plugin ajeno no compensa salvo que lo estés curando de verdad.
+
+Vendorizar sí tiene sentido en el caso contrario: cuando el origen es una skill suelta dentro de
+un repo que **no** publica plugin. Es lo que pasa con `shadcn`, `vercel-react-best-practices` y
+`git-commit`, que están copiadas aquí y las re-trae [`scripts/sync-skills.sh`](scripts/sync-skills.sh).
 
 ## Compatibilidad universal
 
