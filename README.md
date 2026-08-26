@@ -38,6 +38,10 @@ son lo que uso alrededor de estos plugins. Se instalan desde su propio marketpla
 /plugin marketplace add pbakaus/impeccable
 /plugin install impeccable@impeccable
 
+# operar Railway: proyectos, servicios, bases, dominios, variables
+/plugin marketplace add railwayapp/railway-skills
+/plugin install railway@railway-skills
+
 # integración con la terminal Warp
 /plugin marketplace add warpdotdev/claude-code-warp
 /plugin install warp@claude-code-warp
@@ -55,6 +59,10 @@ son lo que uso alrededor de estos plugins. Se instalan desde su propio marketpla
 /plugin marketplace add cloudflare/skills
 /plugin install cloudflare@cloudflare
 ```
+
+El de Railway complementa a `docker-golang-skills`, que cubre el otro lado: esa skill **prepara**
+el despliegue (`Dockerfile.railway`, `railway.json`, targets de Makefile) y el plugin de Railway
+**opera** la plataforma una vez desplegada.
 
 Además de estos, mantengo skills sueltas por proveedor en `~/.claude/skills/`. Esas son locales
 y no se distribuyen desde aquí; si alguna madura y deja de ser específica de un proyecto, acaba
