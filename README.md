@@ -25,6 +25,33 @@ En local, mientras lo desarrollas:
 | [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security`, `git-commit` |
 | [`impeccable`](https://github.com/pbakaus/impeccable) ↗ | `impeccable@jl-stack` | de terceros — 1 skill de diseño + 23 comandos, de Paul Bakaus (Apache-2.0) |
 
+## El resto del stack
+
+Estos no están en el catálogo — se publican por su cuenta y no son de un área concreta — pero
+son lo que uso alrededor de estos plugins. Se instalan desde su propio marketplace:
+
+```bash
+# memoria persistente entre sesiones y compactaciones
+/plugin marketplace add Gentleman-Programming/engram
+/plugin install engram@engram
+
+# integración con la terminal Warp
+/plugin marketplace add warpdotdev/claude-code-warp
+/plugin install warp@claude-code-warp
+
+# del marketplace oficial, ya registrado de fábrica
+/plugin install gopls-lsp@claude-plugins-official       # diagnósticos y navegación en Go
+/plugin install vercel@claude-plugins-official          # despliegue, AI SDK, Next.js
+/plugin install mongodb@claude-plugins-official         # consultas, esquemas, índices
+/plugin install skill-creator@claude-plugins-official   # crear, medir y afinar skills
+```
+
+`gopls-lsp` se apoya en el binario `gopls`, que hay que tener instalado aparte.
+
+Además de estos, mantengo skills sueltas por proveedor en `~/.claude/skills/` (Cloudflare,
+MongoDB, Railway, shadcn). Esas son locales y no se distribuyen desde aquí; si alguna madura y
+deja de ser específica de un proyecto, acaba en uno de los plugins de este catálogo.
+
 ## Plugins de terceros
 
 El catálogo puede **referenciar** plugins que no viven aquí, sin copiarlos. Se declaran con una
