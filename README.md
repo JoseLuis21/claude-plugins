@@ -8,6 +8,7 @@ Marketplace de plugins de Claude Code. Un plugin por área de trabajo: instalas 
 /plugin marketplace add JoseLuis21/claude-plugins
 /plugin install backend@jl-stack
 /plugin install frontend@jl-stack
+/plugin install impeccable@jl-stack
 ```
 
 En local, mientras lo desarrollas:
@@ -22,6 +23,23 @@ En local, mientras lo desarrollas:
 | --- | --- | --- |
 | [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` |
 | [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security`, `git-commit` |
+| [`impeccable`](https://github.com/pbakaus/impeccable) ↗ | `impeccable@jl-stack` | de terceros — 1 skill de diseño + 23 comandos, de Paul Bakaus (Apache-2.0) |
+
+## Plugins de terceros
+
+El catálogo puede **referenciar** plugins que no viven aquí, sin copiarlos. Se declaran con una
+fuente `git-subdir` o `github` apuntando a su repo:
+
+```json
+{
+  "name": "impeccable",
+  "source": { "source": "git-subdir", "url": "https://github.com/pbakaus/impeccable.git", "path": "plugin" }
+}
+```
+
+Claude Code los descarga de su origen al instalarlos, así que se actualizan por su cuenta y este
+repo no crece. Es la forma correcta de curar el trabajo de otros: nada de vendorizar un plugin
+que ya se publica solo.
 
 ## Compatibilidad universal
 
