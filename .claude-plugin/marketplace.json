@@ -6,7 +6,7 @@
     "url": "https://github.com/JoseLuis21"
   },
   "description": "Plugins de Claude Code de Jose Luis: un catálogo por área de trabajo.",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
@@ -45,7 +45,7 @@
       "displayName": "Frontend Toolkit",
       "source": "./plugins/frontend",
       "description": "Tres skills para React y Next.js: componentes con shadcn/ui, las reglas de rendimiento de Vercel Engineering y seguridad OWASP en el navegador.",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "author": {
         "name": "Jose Luis",
         "url": "https://github.com/JoseLuis21"

@@ -2,13 +2,14 @@
 
 `frontend@jl-stack`
 
-Tres skills para aplicaciones React/Next.js: construir la UI, que vaya rápida, que no tenga
+Cuatro skills para aplicaciones React/Next.js: construir la UI, que vaya rápida, que no tenga
 agujeros y commitear con criterio.
 
 | Skill | Se activa cuando pides | Trae |
 | --- | --- | --- |
 | `shadcn` | añadir, buscar, arreglar o componer componentes de shadcn/ui, `shadcn init`, presets, registries, o al trabajar en un proyecto con `components.json` | docs del CLI, registries, personalización, y reglas por tema (formularios, composición, estilos, iconos, chat, base vs radix) |
 | `vercel-react-best-practices` | escribir, revisar o refactorizar React/Next.js pensando en rendimiento: waterfalls, tamaño del bundle, re-renders, data fetching | 70 reglas de Vercel Engineering en 8 categorías, priorizadas por impacto, cada una con ejemplo correcto e incorrecto |
+| `nextjs-architecture` | crear o modificar un módulo, una página, un Server Action, un componente cliente o una función de acceso a datos; integrar una API externa desde el servidor; decidir dónde va código nuevo | la convención completa — módulos con `_actions`/`_components`/`_internal`/`_schemas`, DAL con `server-only`, validación con Zod, DTOs mínimos en camelCase, autorización por recurso, Zustand con `persist`, y las prohibiciones absolutas |
 | `owasp-security-frontend` | revisar la seguridad del cliente, prevenir XSS, configurar una CSP, decidir dónde guardar el token, evitar secretos en el bundle, revisar Server Actions | el Top 10 aplicado al navegador, con el reparto de responsabilidad cliente/servidor y un checklist de salida a producción |
 
 ## Notas

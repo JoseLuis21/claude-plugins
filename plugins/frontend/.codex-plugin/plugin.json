@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Cuatro skills para aplicaciones React/Next.js: componentes con shadcn/ui, optimización de rendimiento de Vercel Engineering, seguridad OWASP en el navegador y Conventional Commits.",
   "author": {
     "name": "Jose Luis",

@@ -21,7 +21,7 @@ En local, mientras lo desarrollas:
 | Plugin | Instalar | Skills |
 | --- | --- | --- |
 | [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `mysql`, `docker-golang-skills`, `github-actions-skills`, `owasp-security` |
-| [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security-frontend` |
+| [`frontend`](plugins/frontend) | `frontend@jl-stack` | `nextjs-architecture`, `shadcn`, `vercel-react-best-practices`, `owasp-security-frontend` |
 | [`common`](plugins/common) | *(dependencia)* | `git-commit` |
 
 ## El resto del stack
