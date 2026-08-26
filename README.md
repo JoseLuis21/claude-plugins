@@ -44,13 +44,33 @@ son lo que uso alrededor de estos plugins. Se instalan desde su propio marketpla
 /plugin install vercel@claude-plugins-official          # despliegue, AI SDK, Next.js
 /plugin install mongodb@claude-plugins-official         # consultas, esquemas, índices
 /plugin install skill-creator@claude-plugins-official   # crear, medir y afinar skills
+/plugin install atlassian@claude-plugins-official       # Jira y Confluence
+
+# Workers, Wrangler, D1, R2, Durable Objects, Agents SDK
+/plugin marketplace add cloudflare/skills
+/plugin install cloudflare@cloudflare
 ```
 
-`gopls-lsp` se apoya en el binario `gopls`, que hay que tener instalado aparte.
+Además de estos, mantengo skills sueltas por proveedor en `~/.claude/skills/`. Esas son locales
+y no se distribuyen desde aquí; si alguna madura y deja de ser específica de un proyecto, acaba
+en uno de los plugins de este catálogo.
 
-Además de estos, mantengo skills sueltas por proveedor en `~/.claude/skills/` (Cloudflare,
-MongoDB, Railway, shadcn). Esas son locales y no se distribuyen desde aquí; si alguna madura y
-deja de ser específica de un proyecto, acaba en uno de los plugins de este catálogo.
+### Herramientas externas
+
+Los plugins escriben configuración y comandos, pero no instalan nada. Las skills de este
+catálogo asumen que tienes a mano:
+
+| Binario | Lo usan | Para qué |
+| --- | --- | --- |
+| `docker` + `buildx` | `docker-golang-skills` | build multi-arch y cache de BuildKit |
+| `aws` | `github-actions-skills`, `go-hexagonal-multitenant-skills` | ECR, ECS, Lambda, CloudWatch |
+| `go` | las de backend | compilar y `go test` |
+| `govulncheck` | `owasp-security` | escaneo de vulnerabilidades en CI |
+| `mysql` | `mysql-query-optimization-skills` | `EXPLAIN ANALYZE` contra el servidor |
+| `npx` / `npm` (o `pnpm`, `bun`) | `shadcn`, `vercel-react-best-practices` | CLI de shadcn, build y auditoría |
+| `gh` | `git-commit` y el flujo de PRs | operaciones sobre GitHub |
+
+Y si instalas `gopls-lsp`, necesitas el binario `gopls`; el plugin no lo trae.
 
 ## Plugins de terceros
 
