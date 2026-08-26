@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Re-trae las skills desde sus repos de origen a plugins/jose-backend-plugin/skills/.
+# Re-trae las skills desde sus repos de origen a plugins/backend/skills/.
 # Sobrescribe lo que haya — revisa el diff antes de commitear.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEST="$ROOT/plugins/jose-backend-plugin/skills"
+DEST="$ROOT/plugins/backend/skills"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 

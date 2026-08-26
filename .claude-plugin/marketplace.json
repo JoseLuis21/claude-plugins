@@ -1,22 +1,22 @@
 {
-  "name": "jose-backend-plugin",
+  "name": "JoseLuis21",
   "owner": {
     "name": "Jose Luis",
     "email": "josedevelopcl@gmail.com",
     "url": "https://github.com/JoseLuis21"
   },
-  "description": "Marketplace de un solo plugin: skills de Claude Code para el ciclo completo de un servicio backend en Go.",
-  "version": "0.4.0",
+  "description": "Plugins de Claude Code de Jose Luis: un catálogo por área de trabajo.",
+  "version": "0.5.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
   "plugins": [
     {
-      "name": "jose-backend-plugin",
-      "displayName": "Jose Backend Plugin",
-      "source": "./plugins/jose-backend-plugin",
+      "name": "backend",
+      "displayName": "Backend Toolkit",
+      "source": "./plugins/backend",
       "description": "Seis skills para servicios backend en Go: arquitectura hexagonal multi-tenant, optimización de queries MySQL, Docker con cache, deploys a AWS desde GitHub Actions, Conventional Commits y OWASP Top 10.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": {
         "name": "Jose Luis",
         "url": "https://github.com/JoseLuis21"
@@ -40,5 +40,8 @@
       "license": "MIT",
       "strict": true
     }
-  ]
+  ],
+  "renames": {
+    "jose-backend-plugin": "backend"
+  }
 }

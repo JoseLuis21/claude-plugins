@@ -1,34 +1,34 @@
-# jose-backend-plugin
+# jose-plugins
 
-Plugin de Claude Code para trabajo de backend, distribuido como marketplace de un solo plugin.
+Marketplace de plugins de Claude Code. Un plugin por área de trabajo: instalas el que te sirve.
 
 ## Instalar
 
 ```bash
-/plugin marketplace add JoseLuis21/jose-backend-plugin
-/plugin install jose-backend-plugin@jose-backend-plugin
+/plugin marketplace add JoseLuis21/jose-plugins
+/plugin install backend@JoseLuis21
 ```
 
-Mientras lo desarrollas en local, apunta el marketplace a esta carpeta:
+En local, mientras lo desarrollas:
 
 ```bash
-/plugin marketplace add /Users/joseluis/Desktop/projects/jose/jose-backend-plugin
+/plugin marketplace add /Users/joseluis/Desktop/projects/jose/jose-plugins
 ```
 
 ## Plugins
 
-| Plugin | Skills | Para qué |
+| Plugin | Instalar | Skills |
 | --- | --- | --- |
-| [`jose-backend-plugin`](plugins/jose-backend-plugin) | `docker-golang-skills`, `github-actions-skills`, `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `git-commit`, `owasp-security` | Estructurar el servicio en Go, optimizar sus queries, dockerizarlo, desplegarlo en AWS, commitear con Conventional Commits y revisar seguridad OWASP |
+| [`backend`](plugins/backend) | `backend@JoseLuis21` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` |
 
 ## Estructura
 
 ```
-.claude-plugin/marketplace.json     catálogo: qué plugins hay y dónde viven
+.claude-plugin/marketplace.json     el catálogo: qué plugins hay y dónde viven
 plugins/<plugin>/
   .claude-plugin/plugin.json        manifiesto del plugin
   skills/<skill>/SKILL.md           una skill por carpeta
-scripts/sync-skills.sh              re-trae las skills desde sus repos de origen
+scripts/sync-skills.sh              re-trae las skills que se mantienen fuera de este repo
 ```
 
 ## Añadir un plugin nuevo
@@ -37,3 +37,15 @@ scripts/sync-skills.sh              re-trae las skills desde sus repos de origen
 2. Crea `plugins/<nombre>/.claude-plugin/plugin.json` con `name`, `version` y `description`.
 3. Añade la entrada al array `plugins` de `.claude-plugin/marketplace.json`.
 4. Sube la `version` en los dos sitios — Claude Code usa ese campo para ofrecer la actualización.
+
+El nombre del plugin es el que va a la izquierda del `@` al instalar, y el que prefija sus skills
+(`/backend:git-commit`). Elígelo corto y por área, no por repo.
+
+## Convención de las skills
+
+Las skills son **genéricas**: sin nombres de cliente, de repos internos, de colas, de funciones ni
+de bases de datos. Donde hace falta un identificador va un placeholder. Antes de publicar:
+
+```bash
+grep -rniE 'nombre-de-cliente|nombre-de-repo-interno' . --exclude-dir=.git
+```
