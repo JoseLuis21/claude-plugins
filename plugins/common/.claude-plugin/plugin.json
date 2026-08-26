@@ -1,7 +1,7 @@
 {
   "name": "common",
   "displayName": "Common",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Skills transversales que comparten los demás plugins de este catálogo. Se instala sola como dependencia; no hace falta pedirla.",
   "author": {
     "name": "Jose Luis",

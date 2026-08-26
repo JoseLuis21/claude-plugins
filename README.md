@@ -139,23 +139,13 @@ plugins/<plugin>/
 └── skills/<nombre>/SKILL.md       ← todas leen de aquí
 ```
 
-**OpenCode va aparte**: no tiene concepto de plugin, lee skills sueltas de `.opencode/skills/`
-en la raíz del repo. Ahí van **enlaces simbólicos** a las skills reales, no copias, para que no
-haya contenido duplicado que se desincronice. Regenéralos con
-[`scripts/sync-opencode.sh`](scripts/sync-opencode.sh) al añadir, quitar o renombrar una skill.
+Dos cosas a tener presentes:
 
-Tres consecuencias de esto que conviene tener presentes:
-
-- **Los nombres de las skills deben ser únicos en todo el catálogo**, no solo dentro de su
-  plugin, porque OpenCode las aplana en una carpeta. Por eso la de seguridad del frontend se
-  llama `owasp-security-frontend` y no `owasp-security`. `check-conformance.sh` lo verifica.
-- **Los enlaces simbólicos pueden no resolverse en Windows** según la configuración de git. Si
-  te afecta, cambia el script para que copie en vez de enlazar.
-- **`dependencies` solo lo entiende Claude Code.** En los demás clientes, `frontend` carga sin
-  `common`: sus skills funcionan, pero `git-commit` hay que cargarla aparte.
-
-Al tocar la versión de un plugin, **súbela en los cuatro manifiestos** — `check-conformance.sh`
-comprueba que no se desalineen.
+- **`dependencies` solo lo entiende Claude Code.** El manifiesto de Agent Plugins es cerrado y no
+  admite el campo. En los demás clientes, `frontend` carga sin `common`: sus skills funcionan,
+  pero `git-commit` hay que cargarla aparte.
+- Al tocar la versión de un plugin, **súbela en los cuatro manifiestos** —
+  `check-conformance.sh` comprueba que no se desalineen.
 
 ## Estructura
 
@@ -167,7 +157,6 @@ plugins/<plugin>/
 scripts/sync-skills.sh              re-trae las skills que se mantienen fuera de este repo
 scripts/check-conformance.sh        valida los dos formatos y la spec de Agent Skills
 scripts/measure.sh                  peso en disco y coste de contexto por plugin
-scripts/sync-opencode.sh            regenera los enlaces de .opencode/skills/
 ```
 
 ## Añadir un plugin nuevo

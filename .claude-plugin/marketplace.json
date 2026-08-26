@@ -6,7 +6,7 @@
     "url": "https://github.com/JoseLuis21"
   },
   "description": "Plugins de Claude Code de Jose Luis: un catálogo por área de trabajo.",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
@@ -16,7 +16,7 @@
       "displayName": "Backend Toolkit",
       "source": "./plugins/backend",
       "description": "Seis skills para servicios backend en Go: arquitectura hexagonal multi-tenant, optimización de queries MySQL, esquemas e índices de InnoDB, Docker con cache y deploys a AWS desde GitHub Actions.",
-      "version": "0.9.0",
+      "version": "0.9.1",
       "author": {
         "name": "Jose Luis",
         "url": "https://github.com/JoseLuis21"
@@ -45,7 +45,7 @@
       "displayName": "Frontend Toolkit",
       "source": "./plugins/frontend",
       "description": "Tres skills para React y Next.js: componentes con shadcn/ui, las reglas de rendimiento de Vercel Engineering y seguridad OWASP en el navegador.",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "author": {
         "name": "Jose Luis",
         "url": "https://github.com/JoseLuis21"
@@ -72,7 +72,7 @@
       "displayName": "Common",
       "source": "./plugins/common",
       "description": "Skills transversales que comparten los demás plugins. Se instala sola como dependencia de backend y frontend.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "author": {
         "name": "Jose Luis",
         "url": "https://github.com/JoseLuis21"

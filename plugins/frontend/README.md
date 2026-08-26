@@ -13,7 +13,7 @@ agujeros y commitear con criterio.
 
 ## Notas
 
-**La de seguridad existe en los dos plugins y no son la misma.** Se llaman distinto —`owasp-security-frontend` aquí y `owasp-security` en `backend`— porque OpenCode aplana todas las skills en una carpeta y los nombres tienen que ser únicos en el catálogo. La de aquí cubre
+**La de seguridad existe en los dos plugins y no son la misma.** Se llaman distinto — `owasp-security-frontend` aquí y `owasp-security` en `backend`— para que no haya duda de cuál se invoca cuando los dos están instalados. La de aquí cubre
 navegador y la capa de servidor del framework (Server Actions, route handlers, middleware); la
 de `backend` cubre API, base de datos y servicio a servicio. Si instalas los dos plugins tendrás
 `/frontend:owasp-security-frontend` y `/backend:owasp-security`, cada una con su ámbito.
