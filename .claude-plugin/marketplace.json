@@ -6,7 +6,7 @@
     "url": "https://github.com/JoseLuis21"
   },
   "description": "Plugins de Claude Code de Jose Luis: un catálogo por área de trabajo.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
@@ -36,6 +36,33 @@
         "conventional-commits",
         "owasp",
         "security"
+      ],
+      "license": "MIT",
+      "strict": true
+    },
+    {
+      "name": "frontend",
+      "displayName": "Frontend Toolkit",
+      "source": "./plugins/frontend",
+      "description": "Cuatro skills para aplicaciones React/Next.js: componentes con shadcn/ui, optimización de rendimiento de Vercel Engineering, seguridad OWASP en el navegador y Conventional Commits.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Jose Luis",
+        "url": "https://github.com/JoseLuis21"
+      },
+      "category": "frontend",
+      "keywords": [
+        "react",
+        "nextjs",
+        "shadcn",
+        "ui",
+        "components",
+        "performance",
+        "core-web-vitals",
+        "frontend",
+        "owasp",
+        "security",
+        "conventional-commits"
       ],
       "license": "MIT",
       "strict": true
