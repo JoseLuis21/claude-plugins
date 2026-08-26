@@ -42,6 +42,14 @@ sync_repo JoseLuis21/docker-golang-skills  docker-golang-skills
 sync_file github/awesome-copilot skills/git-commit/SKILL.md "$BACKEND"  git-commit
 sync_file github/awesome-copilot skills/git-commit/SKILL.md "$FRONTEND" git-commit
 
+sync_subdir planetscale/database-skills skills/mysql "$BACKEND" mysql
+# Sus referencias vienen como URLs absolutas a raw.githubusercontent; las pasamos a rutas
+# relativas para que la skill sea autocontenida y no salga a la red en cada consulta.
+sed -i '' 's|https://raw.githubusercontent.com/planetscale/database-skills/main/skills/mysql/||g' \
+  "$BACKEND/mysql/SKILL.md"
+
+sync_file github/awesome-copilot skills/postgresql-optimization/SKILL.md "$BACKEND" postgresql-optimization
+
 sync_subdir shadcn/ui               skills/shadcn               "$FRONTEND" shadcn evals agents
 sync_subdir vercel-labs/agent-skills skills/react-best-practices "$FRONTEND" vercel-react-best-practices
 

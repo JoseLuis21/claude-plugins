@@ -6,7 +6,7 @@
     "url": "https://github.com/JoseLuis21"
   },
   "description": "Plugins de Claude Code de Jose Luis: un catálogo por área de trabajo.",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
@@ -16,7 +16,7 @@
       "displayName": "Backend Toolkit",
       "source": "./plugins/backend",
       "description": "Seis skills para servicios backend en Go: arquitectura hexagonal multi-tenant, optimización de queries MySQL, Docker con cache, deploys a AWS desde GitHub Actions, Conventional Commits y OWASP Top 10.",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "author": {
         "name": "Jose Luis",
         "url": "https://github.com/JoseLuis21"

@@ -20,7 +20,7 @@ En local, mientras lo desarrollas:
 
 | Plugin | Instalar | Skills |
 | --- | --- | --- |
-| [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` |
+| [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `mysql`, `postgresql-optimization`, `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` |
 | [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security`, `git-commit` |
 
 ## El resto del stack
