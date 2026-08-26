@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "displayName": "Frontend Toolkit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Cuatro skills para aplicaciones React/Next.js: componentes con shadcn/ui, optimización de rendimiento de Vercel Engineering, seguridad OWASP en el navegador y Conventional Commits.",
   "author": {
     "name": "Jose Luis",
@@ -22,5 +22,8 @@
     "owasp",
     "security",
     "conventional-commits"
+  ],
+  "dependencies": [
+    "common"
   ]
 }

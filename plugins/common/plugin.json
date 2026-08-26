@@ -1,0 +1,15 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.1.0/plugin.schema.json",
+  "name": "common",
+  "version": "0.1.0",
+  "description": "Skills transversales que comparten los demás plugins de este catálogo.",
+  "author": {
+    "name": "Jose Luis",
+    "email": "josedevelopcl@gmail.com",
+    "url": "https://github.com/JoseLuis21"
+  },
+  "homepage": "https://github.com/JoseLuis21/claude-plugins",
+  "repository": "https://github.com/JoseLuis21/claude-plugins",
+  "license": "MIT",
+  "keywords": ["git", "conventional-commits"]
+}

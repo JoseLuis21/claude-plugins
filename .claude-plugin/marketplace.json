@@ -6,7 +6,7 @@
     "url": "https://github.com/JoseLuis21"
   },
   "description": "Plugins de Claude Code de Jose Luis: un catálogo por área de trabajo.",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
@@ -15,8 +15,8 @@
       "name": "backend",
       "displayName": "Backend Toolkit",
       "source": "./plugins/backend",
-      "description": "Seis skills para servicios backend en Go: arquitectura hexagonal multi-tenant, optimización de queries MySQL, Docker con cache, deploys a AWS desde GitHub Actions, Conventional Commits y OWASP Top 10.",
-      "version": "0.7.0",
+      "description": "Seis skills para servicios backend en Go: arquitectura hexagonal multi-tenant, optimización de queries MySQL, esquemas e índices de InnoDB, Docker con cache y deploys a AWS desde GitHub Actions.",
+      "version": "0.8.0",
       "author": {
         "name": "Jose Luis",
         "url": "https://github.com/JoseLuis21"
@@ -44,8 +44,8 @@
       "name": "frontend",
       "displayName": "Frontend Toolkit",
       "source": "./plugins/frontend",
-      "description": "Cuatro skills para aplicaciones React/Next.js: componentes con shadcn/ui, optimización de rendimiento de Vercel Engineering, seguridad OWASP en el navegador y Conventional Commits.",
-      "version": "0.2.0",
+      "description": "Tres skills para React y Next.js: componentes con shadcn/ui, las reglas de rendimiento de Vercel Engineering y seguridad OWASP en el navegador.",
+      "version": "0.3.0",
       "author": {
         "name": "Jose Luis",
         "url": "https://github.com/JoseLuis21"
@@ -62,6 +62,24 @@
         "frontend",
         "owasp",
         "security",
+        "conventional-commits"
+      ],
+      "license": "MIT",
+      "strict": true
+    },
+    {
+      "name": "common",
+      "displayName": "Common",
+      "source": "./plugins/common",
+      "description": "Skills transversales que comparten los demás plugins. Se instala sola como dependencia de backend y frontend.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Jose Luis",
+        "url": "https://github.com/JoseLuis21"
+      },
+      "category": "productivity",
+      "keywords": [
+        "git",
         "conventional-commits"
       ],
       "license": "MIT",

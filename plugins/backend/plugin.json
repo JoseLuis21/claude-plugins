@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.1.0/plugin.schema.json",
   "name": "backend",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Seis skills para servicios backend en Go: arquitectura hexagonal multi-tenant, optimización de queries MySQL, Docker con cache, deploys a AWS desde GitHub Actions, Conventional Commits y OWASP Top 10.",
   "author": {
     "name": "Jose Luis",

@@ -20,8 +20,9 @@ En local, mientras lo desarrollas:
 
 | Plugin | Instalar | Skills |
 | --- | --- | --- |
-| [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `mysql`, `postgresql-optimization`, `docker-golang-skills`, `github-actions-skills`, `git-commit`, `owasp-security` |
-| [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security`, `git-commit` |
+| [`backend`](plugins/backend) | `backend@jl-stack` | `go-hexagonal-multitenant-skills`, `mysql-query-optimization-skills`, `mysql`, `docker-golang-skills`, `github-actions-skills`, `owasp-security` |
+| [`frontend`](plugins/frontend) | `frontend@jl-stack` | `shadcn`, `vercel-react-best-practices`, `owasp-security` |
+| [`common`](plugins/common) | *(dependencia)* | `git-commit` |
 
 ## El resto del stack
 
@@ -137,6 +138,28 @@ los dos manifiestos**.
 Las skills cumplen además la [especificación de Agent Skills](https://agentskills.io/specification):
 `name` en minúsculas y coincidiendo con el directorio, `description` de menos de 1024 caracteres,
 y frontmatter YAML válido.
+
+## Skills compartidas
+
+`git-commit` sirve igual escribiendo Go que React, así que en vez de duplicarla vive en el plugin
+`common`, y los otros dos lo declaran como dependencia:
+
+```json
+// plugins/backend/.claude-plugin/plugin.json
+"dependencies": ["common"]
+```
+
+Instalar cualquiera de los dos la arrastra sola — `frontend@jl-stack` responde
+`✔ (+ 1 dependency: common)` — así que cada plugin sigue siendo atómico sin que la skill esté
+por duplicado. Se invoca como `/common:git-commit`.
+
+Dos avisos:
+
+- **`dependencies` no es portable.** El manifiesto de Agent Plugins es cerrado y no admite ese
+  campo, así que va solo en el de Claude Code. Un cliente del estándar cargaría `frontend` sin
+  `common`: el resto de skills funciona, `git-commit` no estaría.
+- Al desinstalar el último plugin que depende de `common`, Claude Code avisa de que queda
+  huérfana y se limpia con `claude plugin prune`.
 
 ## Estructura
 

@@ -1,0 +1,14 @@
+{
+  "name": "common",
+  "displayName": "Common",
+  "version": "0.1.0",
+  "description": "Skills transversales que comparten los demás plugins de este catálogo. Se instala sola como dependencia; no hace falta pedirla.",
+  "author": {
+    "name": "Jose Luis",
+    "email": "josedevelopcl@gmail.com",
+    "url": "https://github.com/JoseLuis21"
+  },
+  "repository": "https://github.com/JoseLuis21/claude-plugins",
+  "license": "MIT",
+  "keywords": ["git", "conventional-commits"]
+}
