@@ -59,6 +59,18 @@ con cientos de miles de filas = el filtro selectivo llegó tarde.
 - **El optimizador entra por la tabla equivocada:** si el filtro selectivo vive en la tabla B
   (p. ej. la fecha, en el cabezal) pero un filtro de entidad lo lleva a A (las líneas), trae todo
   el histórico de esas entidades y recién ahí evalúa la fecha.
+- **La tabla de catálogo como conductora falsa.** El caso más repetido y el más engañoso, porque
+  el filtro selectivo **está en el `WHERE` y tiene índice**: el optimizador igual entra por una
+  tabla de dimensión chica (formas de pago, sucursales, tipos de documento) y por cada una de sus
+  pocas filas hace un lookup por FK sobre la tabla grande, dejando el `BETWEEN` de fecha como
+  filtro posterior. Con 11 formas de pago o 13 sucursales, el `loops` del plan multiplica: se leen
+  millones de filas para devolver miles.
+
+  **Los dos síntomas que lo delatan sin tocar la base:**
+  1. En los logs, el tiempo hasta la primera fila (`first_byte`) es **casi toda** la duración de
+     la consulta, y el total **no sigue a las filas devueltas** — 509 filas tardando más que 663.
+  2. En un `EXPLAIN` a secas —gratis, no ejecuta— el índice bueno aparece en `possible_keys` y
+     **no** en `key`.
 
 ### A.3 `ROW_NUMBER()` para "el último valor por grupo"
 
@@ -82,6 +94,33 @@ Fuerza el orden de tablas (no el índice) y solo con INNER JOIN. Úsalo cuando e
 por la tabla equivocada, **pero condicionado al filtro**: sin filtro de entidad,
 `FROM documents STRAIGHT_JOIN document_lines` (la fecha poda); con filtro de entidad, el orden
 natural `FROM document_lines JOIN documents` es mejor. Medido: de "no termina en 4m40s" a 2.428 ms.
+
+**`FORCE INDEX` casi nunca; hint casi siempre.** `/*+ INDEX(tabla idx) */` dirige el plan igual,
+pero si el índice no existe en esa base deja solo un warning y el optimizador sigue. `FORCE INDEX`
+tumba la consulta con el error **1176**. En un parque de bases por tenant, donde el esquema no
+está garantizado idéntico en todas, esa diferencia es entre un informe lento y un informe caído.
+Usa `FORCE INDEX` **solo cuando el 1176 es lo que buscas**: en una consulta auxiliar que detecta
+si el índice existe para que el código decida.
+
+**Crear el índice no alcanza: hay que decirle que lo use.** Un índice desplegado en casi todas las
+bases no movió el plan — mismos conteos de filas que antes de crearlo, porque el optimizador
+estimaba costos casi empatados (2054 vs 2063) y se quedaba con el equivocado. **Índice y hint son
+una sola tarea, no dos**: medir después de crear el índice y antes de poner el hint da "no sirvió
+de nada" y hace descartar un índice que sí servía.
+
+Tres casos medidos con la misma forma y el mismo remedio:
+
+| Conductora falsa | Sin hint | Con hint |
+|---|---|---|
+| Catálogo de formas de pago (11 filas) | 3.832.301 filas leídas | **134.260** (`loops=1`) |
+| Índice por tipo de documento | 2.412 filas | **138** |
+| Sucursales (13) × entidades (58) | ~34 M, **no termina** | **136.540**, 1,5 s |
+
+Cuando el índice es **compuesto** (`tipo, a, b, fecha, id`), el hint solo no basta: MySQL lo usa
+para el rango de fecha únicamente si la consulta trae **igualdad** en las columnas del medio. Hay
+que agregarlas como predicados redundantes — y **no fijar sus valores a mano**: leerlos del propio
+índice con un `SELECT DISTINCT ... FORCE INDEX`, para que la población sea idéntica por
+construcción en cada base. Un valor inventado que no se cumpla borra filas en silencio.
 
 ### A.5 Medir la selectividad real antes de proponer un índice
 
@@ -109,6 +148,18 @@ filtra por **ambas**: la copia habilita el índice, la original conserva la pobl
 - Reutilizar una tabla agregada "que ya tiene el dato" → eran métricas distintas (promedio
   ponderado vs último precio): 12,4 % de diferencias, 380 entidades sin cobertura. **Compara fila
   por fila antes de sustituir una fuente.**
+- **Acotar una derivada con los filtros del informe "para que agregue menos".** Sonaba obvio: una
+  derivada agregaba la tabla de pagos entera, así que se le metió un `INNER JOIN` al cabezal con
+  los filtros del informe. Resultado: **6x peor** — la derivada pasó de 55 s a 342 s y el total de
+  290 s a 385 s. El filtro solo eliminaba el **8 %** de los grupos y a cambio obligaba a recorrer
+  3,77 M de filas del cabezal dentro de la derivada (283 s). Es §A.5 otra vez: **mide cuánto poda
+  ANTES de escribir el cambio**; un `COUNT(*)` del universo contra el filtrado lo dice en dos
+  segundos.
+- **Suponer que un filtro de baja cardinalidad acota.** En esa misma consulta, el filtro por tipo
+  de documento estimaba 1.857.166 filas y sumarle tres condiciones más la dejaba en **1.857.163**:
+  podaban 3 filas de 1,86 millones, porque casi todo registro cumple las tres. Ningún índice
+  compuesto sobre esas columnas paga. **Compruébalo con `EXPLAIN` a secas, que es gratis**, antes
+  de proponer el índice.
 
 ### A.8 Checklist
 
@@ -118,6 +169,9 @@ filtra por **ambas**: la copia habilita el índice, la original conserva la pobl
 - [ ] Equivalencia por multiconjunto = 0 diferencias en ≥ 2 rangos.
 - [ ] Semántica (desempates, poblaciones) fijada en un test unitario del SQL.
 - [ ] Hints (`STRAIGHT_JOIN`, `FORCE INDEX`) condicionados al filtro, nunca globales.
+- [ ] Si el plan entra por una tabla de catálogo (§A.2), el índice **y** el hint van juntos:
+      crear el índice sin el hint no mueve el plan.
+- [ ] El hint es `/*+ INDEX(...) */`, no `FORCE INDEX`, salvo que el error 1176 sea lo buscado.
 - [ ] Versión de MySQL verificada en todos los nodos si usas funciones nuevas.
 - [ ] Log con duración por query en producción (métrica) para ver el caso frío real.
 
