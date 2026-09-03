@@ -6,7 +6,7 @@
     "url": "https://github.com/JoseLuis21"
   },
   "description": "Plugins de Claude Code de Jose Luis: un catálogo por área de trabajo.",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "metadata": {
     "pluginRoot": "./plugins"
   },
