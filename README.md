@@ -30,10 +30,6 @@ Estos no están en el catálogo — se publican por su cuenta y no son de un ár
 son lo que uso alrededor de estos plugins. Se instalan desde su propio marketplace:
 
 ```bash
-# memoria persistente entre sesiones y compactaciones
-/plugin marketplace add Gentleman-Programming/engram
-/plugin install engram@engram
-
 # lenguaje de diseño para frontend: 1 skill + 23 comandos
 /plugin marketplace add pbakaus/impeccable
 /plugin install impeccable@impeccable
